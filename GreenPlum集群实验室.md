@@ -487,7 +487,7 @@ vm.dirty_ratio = 10
 
 参数解释 -由Gpt4.0(128K)提供
 
-```sql
+```shell
 好的，这些参数大致可以分为处理内存、网络和内核消息的参数。下面是它们的详细解释：
 kernel.shmall：在系统范围内设定共享内存的最大总量（以页为单位）。当创建共享内存段时，系统将它和这个值进行比较。
 kernel.shmmax：系统中单个共享内存段的最大大小（以字节为单位）。这个参数也会影响到共享内存的创建。
@@ -4525,7 +4525,11 @@ drwxr-xr-x.  2 root root   6 Apr 11  2018 src
 [root@Segment-c local]# chown -R gpadmin.gpadmin greenplum-db*
 [root@Segment-c local]#
 处理下即可
+```
 
+### 一些错误的记录
+
+```powershell
 > 这里是错误的操作 不要效方，需要先进行数据重新分布 再删除扩容计划
 [gpadmin@Master-a expand_segment_instance]$ gpexpand -c
 20240620:14:06:29:008127 gpexpand:Master-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
@@ -4555,15 +4559,9 @@ Do you want to dump the gpexpand.status_detail table to file? Yy|Nn (default=Y):
 
 # 回滚镜像到 数据 - 不能回滚
 
-```
-
-### 数据重分布
-
+数据重分布
 因为扩容后没有执行数据重新分布，所以数据依然为之前的segment，模拟场景也有可能发生，有个思路，就是再创建一个segment，或者2个segment，重新做一次数据分布，看看有没有效果。
-
-### 再次扩容一次
-
-```powershell
+再次扩容一次
 [gpadmin@Master-a expand_segment_instance]$ gpexpand -f expand_Segment_nodes 
 20240620:15:28:41:008675 gpexpand:Master-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
 20240620:15:28:41:008675 gpexpand:Master-a:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.4.0, 64-bit compiled on Dec 18 2020 22:31:16'
@@ -4690,11 +4688,8 @@ total 24
 -rw-rw-r-- 1 gpadmin gpadmin  540 Jun 20 15:29 gpexpand_inputfile_20240620_152924
 [gpadmin@Master-a expand_segment_instance]$
 
-```
+再次重新数据重分布
 
-### 再次重新数据重分布
-
-```powershell
 验证下能否成功 分布到其他集群segement
 
 test_database=# SELECT gp_segment_id,count(1) FROM table_test
@@ -4802,13 +4797,7 @@ test_database=#
 20240620:16:26:40:002755 gpstate:Master-a:gpadmin-[WARNING]:-   Configuration reports status as   = Down                                 <<<<<<<<
 20240620:16:26:40:002755 gpstate:Master-a:gpadmin-[WARNING]:-   Segment status                    = Down in configuration                <<<<<<<<
 
-
-
-```
-
-### 解决内存不足导致数据故障的解决方法
-
-```powershell
+解决内存不足导致数据故障的解决方法
 解决方案就是 关闭集群 升级物理内存 然后把故障节点的segment-pri用 segment-mir 替换，通过 gprecoverseg 进行数据恢复 然后主节点 然后集群会提示有mri用于主节点的提示，再 通过-r 的方式转换数据 修复完成！
 记录如下：
 
@@ -4988,9 +4977,6 @@ Continue with segment rebalance procedure Yy|Nn (default=N):
 20240620:17:17:47:005379 gpstate:Master-a:gpadmin-[INFO]:-   Cluster Expansion                                         = In Progress
 20240620:17:17:47:005379 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
 [gpadmin@Master-a gpseg-1]$ SSH connection has been disconnected.
-
-
-
 ```
 
 
