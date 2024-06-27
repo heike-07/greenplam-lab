@@ -3177,6 +3177,17 @@ Segment-b (dbid 13): pg_basebackup: base backup completed
 
 通过Laboratory PXE宿主机，生出2个虚拟机，命名为Segment-c、Segment-d
 
+### 主机规划
+
+| 主机名    | IP地址        | 节点描述     |
+| --------- | ------------- | ------------ |
+| Mastar-a  | 192.168.7.136 | MASTER节点   |
+| Standby-a | 192.168.7.137 | STANDBY节点  |
+| Segment-a | 192.168.7.138 | SEGMENT节点1 |
+| Segment-b | 192.168.7.139 | SEGMENT节点2 |
+| Segment-c | 192.168.7.141 | SEGMENT节点3 |
+| Segment-d | 192.168.7.140 | SEGMENT节点4 |
+
 ### 初始化SengmentCandD
 
 #### SELINUX
