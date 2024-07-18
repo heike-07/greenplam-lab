@@ -1822,29 +1822,3 @@ Continue with segment rebalance procedure Yy|Nn (default=N):
 20240620:17:17:47:005379 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
 [gpadmin@Master-a gpseg-1]$ SSH connection has been disconnected.
 ```
-
-
-
-## 实验五：通过expand进行缩容，并进行数据重分布
-
-Loding ...
-
-## 实验六：新增Standby，HA高可用热备节点
-
-Loding ...
-
-## 实验七：大数据量导入
-
-Loding ...
-
-## 实验八：数据备份&数据恢复...
-
-Loding ...
-
-## 实验九：数据库账户密码&权限认证相关
-
-Loding ...
-
-## 实验十：数据库版本更新
-
-Loding ...
