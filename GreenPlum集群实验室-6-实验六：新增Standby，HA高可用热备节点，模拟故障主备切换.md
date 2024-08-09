@@ -1561,6 +1561,7 @@ gp_sydb=#
 
 # 清理冗余数据
 
+一起清理吧
 ```
 
 ### Standby节点（master）模拟宕机-服务异常
@@ -1926,8 +1927,51 @@ test_database=# select * from gp_segment_configuration order by dbid;
    44 |      -1 | m    | m              | s    | u      | 5432 | Standby-a | Standby-a | /home/gpadmin/data/master/gpseg-1
 (42 rows)
 
+# 清理冗余数据
+ 
+一起清理吧
 ```
 
 ### 总结
 
 通过实验可以看到无论发生了数据丢失，还是模拟宕机 数据库集群都会产生一个 the database system is in recovery mode 状态，解决得方案就是手动切换节点，这样可以用户感知层面第一时间遇到故障，并进行切换，切换后即可恢复正常，master和standby是主备得关系，文件流也是通过ssh文件同步得方式进行的，与segment的 primary和mirror原理相同，故此实验终了。
+
+### 清理实验冗余数据
+
+```powershell
+# 清理实验相关冗余数据
+
+# 清理master 相关冗余数据
+
+[gpadmin@Master-a master]$ ll
+total 8
+drwx------ 22 gpadmin gpadmin 4096 Aug  8 10:15 assume_gpseg-1
+drwx------ 22 gpadmin gpadmin 4096 Aug  9 15:21 gpseg-1
+[gpadmin@Master-a master]$ pwd
+/home/gpadmin/data/master
+[gpadmin@Master-a master]$ rm -rf assume_gpseg-1
+[gpadmin@Master-a master]$ ll
+total 4
+drwx------ 22 gpadmin gpadmin 4096 Aug  9 15:21 gpseg-1
+[gpadmin@Master-a master]$
+
+# 清理standby 相关冗余数据
+
+[gpadmin@Standby-a master]$ pwd
+/home/gpadmin/data/master
+[gpadmin@Standby-a master]$ ll
+total 8
+drwx------ 22 gpadmin gpadmin 4096 Aug  9 15:21 gpseg-1
+drwx------ 22 gpadmin gpadmin 4096 Aug  9 15:11 out_gpseg-1
+[gpadmin@Standby-a master]$ rm -rf out_gpseg-1
+[gpadmin@Standby-a master]$ ll
+total 4
+drwx------ 22 gpadmin gpadmin 4096 Aug  9 15:21 gpseg-1
+[gpadmin@Standby-a master]$
+
+# 制作全量镜像 存盘
+END
+
+
+```
+
