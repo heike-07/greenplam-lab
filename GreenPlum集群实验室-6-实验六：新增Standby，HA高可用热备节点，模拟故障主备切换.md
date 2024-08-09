@@ -1027,7 +1027,545 @@ test_database=# select * from gp_segment_configuration order by dbid;
 (42 rows)
 
 test_database=# 
+```
 
+### Master节点模拟宕机-数据丢失
+
+```powershell
+# 先做镜像备份 保存当前有standby的状态
+
+# 通过mv 文件夹模拟数据丢失
+
+[gpadmin@Master-a security]$ gpstate
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-Starting gpstate with args: 
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.4.0, 64-bit compiled on Dec 18 2020 22:31:16'
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-Obtaining Segment details from master...
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-Gathering data from segments...
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-Greenplum instance status summary
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Master instance                                           = Active
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Master standby                                            = Standby-a
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Standby master state                                      = Standby host passive
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total segment instance count from metadata                = 40
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Primary Segment Status
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total primary segments                                    = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total primary segment valid (at master)                   = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total primary segment failures (at master)                = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Mirror Segment Status
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total mirror segments                                     = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total mirror segment valid (at master)                    = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total mirror segment failures (at master)                 = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number mirror segments acting as primary segments   = 0
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Total number mirror segments acting as mirror segments    = 20
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-   Cluster Expansion                                         = In Progress
+20240808:10:09:08:102851 gpstate:Master-a:gpadmin-[INFO]:-----------------------------------------------------
+[gpadmin@Master-a security]$
+
+[gpadmin@Master-a security]$ cd ~
+[gpadmin@Master-a ~]$ cd data/
+[gpadmin@Master-a data]$ ll
+total 0
+drwxrwxr-x 3 gpadmin gpadmin 21 Jun 20 15:35 master
+drwxrwxr-x 2 gpadmin gpadmin  6 Jun  6 15:26 mirror
+drwxrwxr-x 2 gpadmin gpadmin  6 Jun  6 15:26 primary
+[gpadmin@Master-a data]$ cd master/
+[gpadmin@Master-a master]$ ll
+total 4
+drwx------ 22 gpadmin gpadmin 4096 Aug  7 15:11 gpseg-1
+[gpadmin@Master-a master]$ du -h gpseg-1/
+0       gpseg-1/pg_xlog/archive_status
+448M    gpseg-1/pg_xlog
+4.3M    gpseg-1/global
+32K     gpseg-1/pg_clog
+0       gpseg-1/pg_dynshmem
+32K     gpseg-1/pg_notify
+0       gpseg-1/pg_serial
+0       gpseg-1/pg_snapshots
+32K     gpseg-1/pg_subtrans
+0       gpseg-1/pg_twophase
+32K     gpseg-1/pg_multixact/members
+32K     gpseg-1/pg_multixact/offsets
+64K     gpseg-1/pg_multixact
+17M     gpseg-1/base/1
+17M     gpseg-1/base/12809
+17M     gpseg-1/base/12812
+17M     gpseg-1/base/16384
+17M     gpseg-1/base/16385
+0       gpseg-1/base/pgsql_tmp
+17M     gpseg-1/base/16410
+99M     gpseg-1/base
+0       gpseg-1/pg_replslot
+0       gpseg-1/pg_tblspc
+0       gpseg-1/pg_stat
+0       gpseg-1/pg_stat_tmp
+0       gpseg-1/pg_logical/snapshots
+0       gpseg-1/pg_logical/mappings
+0       gpseg-1/pg_logical
+32K     gpseg-1/pg_distributedlog
+0       gpseg-1/pg_utilitymodedtmredo
+3.1M    gpseg-1/pg_log
+4.0K    gpseg-1/gpperfmon/conf
+0       gpseg-1/gpperfmon/logs
+0       gpseg-1/gpperfmon/data
+4.0K    gpseg-1/gpperfmon
+555M    gpseg-1/
+[gpadmin@Master-a master]$
+
+
+[gpadmin@Master-a master]$ ls
+gpseg-1
+[gpadmin@Master-a master]$ mv gpseg-1 assume_gpseg-1
+[gpadmin@Master-a master]$ 
+[gpadmin@Master-a master]$ ll
+total 4
+drwx------ 22 gpadmin gpadmin 4096 Aug  7 15:11 assume_gpseg-1
+[gpadmin@Master-a master]$
+
+[gpadmin@Master-a master]$ gpstate
+20240808:10:15:12:115748 gpstate:Master-a:gpadmin-[INFO]:-Starting gpstate with args: 
+20240808:10:15:12:115748 gpstate:Master-a:gpadmin-[CRITICAL]:-gpstate failed. (Reason='[Errno 2] No such file or directory: '/home/gpadmin/data/master/gpseg-1/postgresql.conf'') exiting...
+[gpadmin@Master-a master]$
+
+可以看到master 节点失效
+```
+
+数据库状态情况
+
+![image-20240808101725973](GreenPlum集群实验室-6-实验六：新增Standby，HA高可用热备节点，模拟故障主备切换.assets/image-20240808101725973.png)
+
+![image-20240808101750597](GreenPlum集群实验室-6-实验六：新增Standby，HA高可用热备节点，模拟故障主备切换.assets/image-20240808101750597.png)
+
+可以看到提示不一样，应该是已经切换到standby节点上了，但是数据不能正常查询。
+
+到standby节点上进行查看
+
+```powershell
+[gpadmin@Standby-a etc]$ gpstate
+20240808:10:18:43:079871 gpstate:Standby-a:gpadmin-[INFO]:-Starting gpstate with args: 
+20240808:10:18:43:079871 gpstate:Standby-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
+20240808:10:18:43:079871 gpstate:Standby-a:gpadmin-[CRITICAL]:-gpstate failed. (Reason='FATAL:  the database system is in recovery mode
+DETAIL:  last replayed record at 0/2C002828
+- VERSION: PostgreSQL 9.4.24 (Greenplum Database 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.4.0, 64-bit compiled on Dec 18 2020 22:31:16
+') exiting...
+[gpadmin@Standby-a etc]$
+
+依然提示报错，此情况应该是需要节点调度
+
+[gpadmin@Standby-a etc]$ cd ~
+[gpadmin@Standby-a ~]$ cd data/
+[gpadmin@Standby-a data]$ ls
+master
+[gpadmin@Standby-a data]$ cd master/l
+[gpadmin@Standby-a master]$ s
+gpseg-1
+[gpadmin@Standby-a master]$ du -h gpseg-1/
+0       gpseg-1/pg_xlog/archive_status
+128M    gpseg-1/pg_xlog
+4.3M    gpseg-1/global
+32K     gpseg-1/pg_clog
+0       gpseg-1/pg_dynshmem
+32K     gpseg-1/pg_notify
+0       gpseg-1/pg_serial
+0       gpseg-1/pg_snapshots
+0       gpseg-1/pg_subtrans
+0       gpseg-1/pg_twophase
+32K     gpseg-1/pg_multixact/members
+32K     gpseg-1/pg_multixact/offsets
+64K     gpseg-1/pg_multixact
+17M     gpseg-1/base/1
+17M     gpseg-1/base/12809
+17M     gpseg-1/base/12812
+17M     gpseg-1/base/16384
+17M     gpseg-1/base/16385
+17M     gpseg-1/base/16410
+99M     gpseg-1/base
+0       gpseg-1/pg_replslot
+0       gpseg-1/pg_tblspc
+0       gpseg-1/pg_stat
+0       gpseg-1/pg_stat_tmp
+0       gpseg-1/pg_logical/snapshots
+0       gpseg-1/pg_logical/mappings
+0       gpseg-1/pg_logical
+32K     gpseg-1/pg_distributedlog
+0       gpseg-1/pg_utilitymodedtmredo
+72K     gpseg-1/pg_log
+4.0K    gpseg-1/gpperfmon/conf
+4.0K    gpseg-1/gpperfmon
+231M    gpseg-1/
+[gpadmin@Standby-a master]$
+
+[gpadmin@Standby-a master]$ cd ~
+[gpadmin@Standby-a ~]$ cat .
+./             ../            .bash_history  .bash_logout   .bash_profile  .bashrc        .ssh/          
+[gpadmin@Standby-a ~]$ cat .bashrc 
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+# User specific aliases and functions
+
+source /usr/local/greenplum-db/greenplum_path.sh
+export PGPORT=5432
+export PGUSER=gpadmin
+export MASTER_DATA_DIRECTORY=/home/gpadmin/data/master/gpseg-1
+export PGDATABASE=gp_sydb
+export LD_PRELOAD=/lib64/libz.so.1 ps
+[gpadmin@Standby-a ~]$ echo $MASTER_DATA_DIRECTORY
+/home/gpadmin/data/master/gpseg-1
+[gpadmin@Standby-a ~]$
+
+
+[gpadmin@Standby-a ~]$ gpactivatestandby -d $MASTER_DATA_DIRECTORY
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Running Command: ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep \`cat /home/gpadmin/data/master/gpseg-1/postmaster.pid | head -1\` || echo -1
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Standby data directory    = /home/gpadmin/data/master/gpseg-1
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Standby port              = 5432
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Standby running           = yes
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Force standby activation  = no
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+20240808:10:22:23:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Running Command: cat /tmp/.s.PGSQL.5432.lock
+Do you want to continue with standby master activation? Yy|Nn (default=N):
+> y
+20240808:10:22:26:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Running Command: ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep `cat /home/gpadmin/data/master/gpseg-1/postmaster.pid | head -1` || echo -1
+20240808:10:22:26:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-found standby postmaster process
+20240808:10:22:26:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Promoting standby...
+20240808:10:22:26:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Running Command: pg_ctl promote -D /home/gpadmin/data/master/gpseg-1
+20240808:10:22:26:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Waiting for connection...
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Standby master is promoted
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Reading current configuration...
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[DEBUG]:-Connecting to dbname='gp_sydb'
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-The activation of the standby master has completed successfully.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Standby-a is now the new primary master.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-You will need to update your user access mechanism to reflect
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-the change of master hostname.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Do not re-start the failed master while the fail-over master is
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-operational, this could result in database corruption!
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-MASTER_DATA_DIRECTORY is now /home/gpadmin/data/master/gpseg-1 if
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-this has changed as a result of the standby master activation, remember
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-to change this in any startup scripts etc, that may be configured
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-to set this value.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-MASTER_PORT is now 5432, if this has changed, you
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-may need to make additional configuration changes to allow access
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-to the Greenplum instance.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Refer to the Administrator Guide for instructions on how to re-activate
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-the master to its previous state once it becomes available.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-Query planner statistics must be updated on all databases
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-following standby master activation.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:-When convenient, run ANALYZE against all user databases.
+20240808:10:22:27:080259 gpactivatestandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+[gpadmin@Standby-a ~]$
+
+[gpadmin@Standby-a ~]$ gpstate
+20240808:10:22:58:080355 gpstate:Standby-a:gpadmin-[INFO]:-Starting gpstate with args: 
+20240808:10:22:58:080355 gpstate:Standby-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
+20240808:10:22:58:080355 gpstate:Standby-a:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.4.0, 64-bit compiled on Dec 18 2020 22:31:16'
+20240808:10:22:58:080355 gpstate:Standby-a:gpadmin-[INFO]:-Obtaining Segment details from master...
+20240808:10:22:58:080355 gpstate:Standby-a:gpadmin-[INFO]:-Gathering data from segments...
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-Greenplum instance status summary
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Master instance                                           = Active
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Master standby                                            = No master standby configured
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total segment instance count from metadata                = 40
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Primary Segment Status
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segments                                    = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segment valid (at master)                   = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segment failures (at master)                = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Mirror Segment Status
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segments                                     = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segment valid (at master)                    = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segment failures (at master)                 = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number mirror segments acting as primary segments   = 0
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Total number mirror segments acting as mirror segments    = 20
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-   Cluster Expansion                                         = In Progress
+20240808:10:22:59:080355 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+[gpadmin@Standby-a ~]$
+
+可以看到 已经切换到 standby节点了
+
+gp_sydb=# select * from gp_segment_configuration order by dbid;
+ dbid | content | role | preferred_role | mode | status | port | hostname  |  address  |              datadir
+------+---------+------+----------------+------+--------+------+-----------+-----------+------------------------------------
+    2 |       0 | p    | p              | s    | u      | 6000 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg0
+    3 |       1 | p    | p              | s    | u      | 6001 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg1
+    4 |       2 | p    | p              | s    | u      | 6000 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg2
+    5 |       3 | p    | p              | s    | u      | 6001 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg3
+    6 |       4 | p    | p              | s    | u      | 6002 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg4
+    7 |       5 | p    | p              | s    | u      | 6003 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg5
+    8 |       6 | p    | p              | s    | u      | 6002 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg6
+    9 |       7 | p    | p              | s    | u      | 6003 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg7
+   10 |       0 | m    | m              | s    | u      | 7000 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg0
+   11 |       1 | m    | m              | s    | u      | 7001 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg1
+   12 |       4 | m    | m              | s    | u      | 7002 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg4
+   13 |       5 | m    | m              | s    | u      | 7003 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg5
+   14 |       2 | m    | m              | s    | u      | 7000 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg2
+   15 |       3 | m    | m              | s    | u      | 7001 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg3
+   16 |       6 | m    | m              | s    | u      | 7002 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg6
+   17 |       7 | m    | m              | s    | u      | 7003 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg7
+   18 |       8 | p    | p              | s    | u      | 6000 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg8
+   19 |       9 | p    | p              | s    | u      | 6001 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg9
+   20 |      10 | p    | p              | s    | u      | 6002 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg10
+   21 |      11 | p    | p              | s    | u      | 6003 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg11
+   22 |      12 | p    | p              | s    | u      | 6000 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg12
+   23 |      13 | p    | p              | s    | u      | 6001 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg13
+   24 |      14 | p    | p              | s    | u      | 6002 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg14
+   25 |      15 | p    | p              | s    | u      | 6003 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg15
+   26 |      12 | m    | m              | s    | u      | 7000 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg12
+   27 |      13 | m    | m              | s    | u      | 7001 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg13
+   28 |      14 | m    | m              | s    | u      | 7002 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg14
+   29 |      15 | m    | m              | s    | u      | 7003 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg15
+   30 |       8 | m    | m              | s    | u      | 7000 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg8
+   31 |       9 | m    | m              | s    | u      | 7001 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg9
+   32 |      10 | m    | m              | s    | u      | 7002 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg10
+   33 |      11 | m    | m              | s    | u      | 7003 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg11
+   34 |      16 | p    | p              | s    | u      | 6004 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg16
+   35 |      17 | p    | p              | s    | u      | 6004 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg17
+   36 |      18 | p    | p              | s    | u      | 6004 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg18
+   37 |      19 | p    | p              | s    | u      | 6004 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg19
+   38 |      19 | m    | m              | s    | u      | 7004 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg19
+   39 |      16 | m    | m              | s    | u      | 7004 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg16
+   40 |      17 | m    | m              | s    | u      | 7004 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg17
+   41 |      18 | m    | m              | s    | u      | 7004 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg18
+   42 |      -1 | p    | p              | s    | u      | 5432 | Standby-a | Standby-a | /home/gpadmin/data/master/gpseg-1
+(41 rows)
+
+gp_sydb=# 
+
+可看到元数据已经没有了 master-a节点 同时也没有 standby 节点了 
+
+# 重新构建一个stardby 节点
+
+[gpadmin@Master-a master]$ ll
+total 4
+drwx------ 22 gpadmin gpadmin 4096 Aug  8 10:15 assume_gpseg-1
+[gpadmin@Master-a master]$
+
+
+[gpadmin@Standby-a ~]$ gpinitstandby -s Master-a
+20240808:10:28:50:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Validating environment and parameters for standby initialization...
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Checking for data directory /home/gpadmin/data/master/gpseg-1 on Master-a
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum standby master initialization parameters
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:------------------------------------------------------
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum master hostname               = Standby-a
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum master data directory         = /home/gpadmin/data/master/gpseg-1
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum master port                   = 5432
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum standby master hostname       = Master-a
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum standby master port           = 5432
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum standby master data directory = /home/gpadmin/data/master/gpseg-1
+20240808:10:28:51:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Greenplum update system catalog         = On
+Do you want to continue with standby master initialization? Yy|Nn (default=N):
+> y 
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Syncing Greenplum Database extensions to standby
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[WARNING]:-Syncing of Greenplum Database extensions has failed.
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[WARNING]:-Please run gppkg --clean after successful standby initialization.
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Adding standby master to catalog...
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Database catalog updated successfully.
+20240808:10:28:55:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Updating pg_hba.conf file...
+20240808:10:28:56:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-pg_hba.conf files updated successfully.
+20240808:10:28:57:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Starting standby master
+20240808:10:28:57:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Checking if standby master is running on host: Master-a  in directory: /home/gpadmin/data/master/gpseg-1
+20240808:10:28:58:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Cleaning up pg_hba.conf backup files...
+20240808:10:28:58:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Backup files of pg_hba.conf cleaned up successfully.
+20240808:10:28:58:080711 gpinitstandby:Standby-a:gpadmin-[INFO]:-Successfully created standby master on Master-a
+[gpadmin@Standby-a ~]$
+
+[gpadmin@Master-a master]$ ll
+total 8
+drwx------ 22 gpadmin gpadmin 4096 Aug  8 10:15 assume_gpseg-1
+drwx------ 22 gpadmin gpadmin 4096 Aug  8 10:28 gpseg-1
+[gpadmin@Master-a master]$ du -h gpseg-1/
+0       gpseg-1/pg_xlog/archive_status
+65M     gpseg-1/pg_xlog
+4.3M    gpseg-1/global
+32K     gpseg-1/pg_clog
+0       gpseg-1/pg_dynshmem
+32K     gpseg-1/pg_notify
+0       gpseg-1/pg_serial
+0       gpseg-1/pg_snapshots
+0       gpseg-1/pg_subtrans
+0       gpseg-1/pg_twophase
+32K     gpseg-1/pg_multixact/members
+32K     gpseg-1/pg_multixact/offsets
+64K     gpseg-1/pg_multixact
+17M     gpseg-1/base/1
+17M     gpseg-1/base/12809
+17M     gpseg-1/base/12812
+17M     gpseg-1/base/16384
+17M     gpseg-1/base/16385
+17M     gpseg-1/base/16410
+99M     gpseg-1/base
+0       gpseg-1/pg_replslot
+0       gpseg-1/pg_tblspc
+0       gpseg-1/pg_stat
+0       gpseg-1/pg_stat_tmp
+0       gpseg-1/pg_logical/snapshots
+0       gpseg-1/pg_logical/mappings
+0       gpseg-1/pg_logical
+32K     gpseg-1/pg_distributedlog
+0       gpseg-1/pg_utilitymodedtmredo
+8.0K    gpseg-1/pg_log
+4.0K    gpseg-1/gpperfmon/conf
+4.0K    gpseg-1/gpperfmon
+167M    gpseg-1/
+[gpadmin@Master-a master]$
+
+[gpadmin@Standby-a ~]$ gpstate
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-Starting gpstate with args: 
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source'
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-master Greenplum Version: 'PostgreSQL 9.4.24 (Greenplum Database 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source) on x86_64-unknown-linux-gnu, compiled by gcc (GCC) 6.4.0, 64-bit compiled on Dec 18 2020 22:31:16'
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-Obtaining Segment details from master...
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-Gathering data from segments...
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-Greenplum instance status summary
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Master instance                                           = Active
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Master standby                                            = Master-a
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Standby master state                                      = Standby host passive
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total segment instance count from metadata                = 40
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Primary Segment Status
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segments                                    = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segment valid (at master)                   = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total primary segment failures (at master)                = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Mirror Segment Status
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segments                                     = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segment valid (at master)                    = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total mirror segment failures (at master)                 = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files missing              = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid files found                = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs missing               = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of postmaster.pid PIDs found                 = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files missing                   = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number of /tmp lock files found                     = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes missing                 = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number postmaster processes found                   = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number mirror segments acting as primary segments   = 0
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Total number mirror segments acting as mirror segments    = 20
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-   Cluster Expansion                                         = In Progress
+20240808:10:30:13:080847 gpstate:Standby-a:gpadmin-[INFO]:-----------------------------------------------------
+[gpadmin@Standby-a ~]$
+
+现在的情况是 standby-a 为master master-a 为 standby
+
+gp_sydb=# select * from gp_segment_configuration order by dbid;
+ dbid | content | role | preferred_role | mode | status | port | hostname  |  address  |              datadir
+------+---------+------+----------------+------+--------+------+-----------+-----------+------------------------------------
+    2 |       0 | p    | p              | s    | u      | 6000 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg0
+    3 |       1 | p    | p              | s    | u      | 6001 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg1
+    4 |       2 | p    | p              | s    | u      | 6000 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg2
+    5 |       3 | p    | p              | s    | u      | 6001 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg3
+    6 |       4 | p    | p              | s    | u      | 6002 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg4
+    7 |       5 | p    | p              | s    | u      | 6003 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg5
+    8 |       6 | p    | p              | s    | u      | 6002 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg6
+    9 |       7 | p    | p              | s    | u      | 6003 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg7
+   10 |       0 | m    | m              | s    | u      | 7000 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg0
+   11 |       1 | m    | m              | s    | u      | 7001 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg1
+   12 |       4 | m    | m              | s    | u      | 7002 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg4
+   13 |       5 | m    | m              | s    | u      | 7003 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg5
+   14 |       2 | m    | m              | s    | u      | 7000 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg2
+   15 |       3 | m    | m              | s    | u      | 7001 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg3
+   16 |       6 | m    | m              | s    | u      | 7002 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg6
+   17 |       7 | m    | m              | s    | u      | 7003 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg7
+   18 |       8 | p    | p              | s    | u      | 6000 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg8
+   19 |       9 | p    | p              | s    | u      | 6001 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg9
+   20 |      10 | p    | p              | s    | u      | 6002 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg10
+   21 |      11 | p    | p              | s    | u      | 6003 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg11
+   22 |      12 | p    | p              | s    | u      | 6000 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg12
+   23 |      13 | p    | p              | s    | u      | 6001 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg13
+   24 |      14 | p    | p              | s    | u      | 6002 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg14
+   25 |      15 | p    | p              | s    | u      | 6003 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg15
+   26 |      12 | m    | m              | s    | u      | 7000 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg12
+   27 |      13 | m    | m              | s    | u      | 7001 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg13
+   28 |      14 | m    | m              | s    | u      | 7002 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg14
+   29 |      15 | m    | m              | s    | u      | 7003 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg15
+   30 |       8 | m    | m              | s    | u      | 7000 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg8
+   31 |       9 | m    | m              | s    | u      | 7001 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg9
+   32 |      10 | m    | m              | s    | u      | 7002 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg10
+   33 |      11 | m    | m              | s    | u      | 7003 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg11
+   34 |      16 | p    | p              | s    | u      | 6004 | Segment-a | Segment-a | /home/gpadmin/data/primary/gpseg16
+   35 |      17 | p    | p              | s    | u      | 6004 | Segment-b | Segment-b | /home/gpadmin/data/primary/gpseg17
+   36 |      18 | p    | p              | s    | u      | 6004 | Segment-c | Segment-c | /home/gpadmin/data/primary/gpseg18
+   37 |      19 | p    | p              | s    | u      | 6004 | Segment-d | Segment-d | /home/gpadmin/data/primary/gpseg19
+   38 |      19 | m    | m              | s    | u      | 7004 | Segment-a | Segment-a | /home/gpadmin/data/mirror/gpseg19
+   39 |      16 | m    | m              | s    | u      | 7004 | Segment-b | Segment-b | /home/gpadmin/data/mirror/gpseg16
+   40 |      17 | m    | m              | s    | u      | 7004 | Segment-c | Segment-c | /home/gpadmin/data/mirror/gpseg17
+   41 |      18 | m    | m              | s    | u      | 7004 | Segment-d | Segment-d | /home/gpadmin/data/mirror/gpseg18
+   42 |      -1 | p    | p              | s    | u      | 5432 | Standby-a | Standby-a | /home/gpadmin/data/master/gpseg-1
+   43 |      -1 | m    | m              | s    | u      | 5432 | Master-a  | Master-a  | /home/gpadmin/data/master/gpseg-1
+(42 rows)
+
+gp_sydb=# 
+
+实验成功了 再次模拟 服务down掉 再把角色切换回来
+
+# 清理冗余数据
+
+```
+
+### Standby节点（master）模拟宕机-服务异常
+
+```powershell
 
 ```
 
