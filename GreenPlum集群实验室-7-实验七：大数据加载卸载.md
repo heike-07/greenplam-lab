@@ -560,3 +560,297 @@ ORDER BY gp_segment_id
 
 外部表，用于数据导入和数据卸载；Gpfdist服务，用于关联文件和服务；内部表，用于数据查询和存储；速度来看，还挺快的。
 
+### 实验开始-基于Web的外部表接入
+
+上面实验介绍了基于文件服务器的数据表，其实还可以使用基于web表的方式读取静态数据。
+
+#### 先做一个http代理
+
+采用最原始的httpd的方式进行代理，不使用nginx，nginx也可以实现相应的内容，最后可以实现通过URL能访问固定的文件结构和数据即可。
+
+```powershell
+# 查看yum源状态
+[root@Master-a ~]# yum makecache
+Loaded plugins: fastestmirror
+Determining fastest mirrors
+localhttp                                                                                                           | 3.6 kB  00:00:00     
+Metadata Cache Created
+[root@Master-a ~]# cat /etc/yum.repos.d/localhttp.repo 
+[localhttp]
+name=Local Yum http
+baseurl=http://192.168.7.137/localyum
+enable=1
+gpgcheck=0
+[root@Master-a ~]# cat /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.7.136  Master-a
+192.168.7.137  Standby-a
+192.168.7.138  Segment-a
+192.168.7.139  Segment-b
+192.168.7.141  Segment-c
+192.168.7.140  Segment-d
+[root@Master-a ~]#
+
+# 查看httpd服务状态
+[root@Master-a ~]# systemctl status httpd
+Unit httpd.service could not be found.
+[root@Master-a ~]#
+
+# 安装httpd服务状态
+[root@Master-a ~]# yum install httpd
+Loaded plugins: fastestmirror
+Loading mirror speeds from cached hostfile
+Resolving Dependencies
+--> Running transaction check
+---> Package httpd.x86_64 0:2.4.6-93.el7.centos will be installed
+--> Processing Dependency: httpd-tools = 2.4.6-93.el7.centos for package: httpd-2.4.6-93.el7.centos.x86_64
+--> Processing Dependency: /etc/mime.types for package: httpd-2.4.6-93.el7.centos.x86_64
+--> Running transaction check
+---> Package httpd-tools.x86_64 0:2.4.6-93.el7.centos will be installed
+---> Package mailcap.noarch 0:2.1.41-2.el7 will be installed
+--> Finished Dependency Resolution
+
+Dependencies Resolved
+
+===========================================================================================================================================
+ Package                         Arch                       Version                                    Repository                     Size
+===========================================================================================================================================
+Installing:
+ httpd                           x86_64                     2.4.6-93.el7.centos                        localhttp                     2.7 M
+Installing for dependencies:
+ httpd-tools                     x86_64                     2.4.6-93.el7.centos                        localhttp                      92 k
+ mailcap                         noarch                     2.1.41-2.el7                               localhttp                      31 k
+
+Transaction Summary
+===========================================================================================================================================
+Install  1 Package (+2 Dependent packages)
+
+Total download size: 2.8 M
+Installed size: 9.6 M
+Is this ok [y/d/N]: y
+Downloading packages:
+(1/3): httpd-tools-2.4.6-93.el7.centos.x86_64.rpm                                                                   |  92 kB  00:00:00     
+(2/3): mailcap-2.1.41-2.el7.noarch.rpm                                                                              |  31 kB  00:00:00     
+(3/3): httpd-2.4.6-93.el7.centos.x86_64.rpm                                                                         | 2.7 MB  00:00:00     
+-------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                       33 MB/s | 2.8 MB  00:00:00     
+Running transaction check
+Running transaction test
+Transaction test succeeded
+Running transaction
+  Installing : mailcap-2.1.41-2.el7.noarch                                                                                             1/3 
+  Installing : httpd-tools-2.4.6-93.el7.centos.x86_64                                                                                  2/3 
+  Installing : httpd-2.4.6-93.el7.centos.x86_64                                                                                        3/3 
+  Verifying  : httpd-tools-2.4.6-93.el7.centos.x86_64                                                                                  1/3 
+  Verifying  : mailcap-2.1.41-2.el7.noarch                                                                                             2/3 
+  Verifying  : httpd-2.4.6-93.el7.centos.x86_64                                                                                        3/3 
+
+Installed:
+  httpd.x86_64 0:2.4.6-93.el7.centos                                                                                                       
+
+Dependency Installed:
+  httpd-tools.x86_64 0:2.4.6-93.el7.centos                                  mailcap.noarch 0:2.1.41-2.el7                                 
+
+Complete!
+[root@Master-a ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+     Docs: man:httpd(8)
+           man:apachectl(8)
+[root@Master-a ~]#
+
+# 开启服务-并开启自启动
+
+[root@Master-a ~]# systemctl enable httpd --now
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+[root@Master-a ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Mon 2024-10-28 14:43:57 CST; 3s ago
+     Docs: man:httpd(8)
+           man:apachectl(8)
+ Main PID: 2432 (httpd)
+   Status: "Processing requests..."
+   CGroup: /system.slice/httpd.service
+           ├─2432 /usr/sbin/httpd -DFOREGROUND
+           ├─2433 /usr/sbin/httpd -DFOREGROUND
+           ├─2434 /usr/sbin/httpd -DFOREGROUND
+           ├─2435 /usr/sbin/httpd -DFOREGROUND
+           ├─2436 /usr/sbin/httpd -DFOREGROUND
+           └─2437 /usr/sbin/httpd -DFOREGROUND
+
+Oct 28 14:43:57 Master-a systemd[1]: Starting The Apache HTTP Server...
+Oct 28 14:43:57 Master-a httpd[2432]: AH00558: httpd: Could not reliably determine the server's fully qualified domain name, usi... message
+Oct 28 14:43:57 Master-a systemd[1]: Started The Apache HTTP Server.
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@Master-a ~]#
+
+# 访问尝试
+[root@Master-a ~]# curl -I http://192.168.7.136/test
+HTTP/1.1 404 Not Found
+Date: Mon, 28 Oct 2024 06:46:04 GMT
+Server: Apache/2.4.6 (CentOS)
+Content-Type: text/html; charset=iso-8859-1
+
+# 数据导入 - 查看数据
+[root@Master-a data500w]# pwd
+/home/gpadmin/import_data/data500w
+[root@Master-a data500w]# head table_test.csv 
+"id","name","age","address","salary"
+"34","KKKKKKKKKKKKKKKK","16",,"3954"
+"53","YYYYYYYYYYYYYYYY","33",,"6884"
+"70","ZZZZZZZZZZZZZZZZ","13",,"2475"
+"75","[[[[[[[[[[[[[[[[","32",,"6818"
+"80","VVVVVVVVVVVVVVVV","32",,"869"
+"93","PPPPPPPPPPPPPPPP","4",,"9570"
+"109","BBBBBBBBBBBBBBBB","19",,"7567"
+"142","CCCCCCCCCCCCCCCC","28",,"8775"
+"143","UUUUUUUUUUUUUUUU","5",,"1298"
+[root@Master-a data500w]#
+
+# 映射到httpd服务
+[root@Master-a html]# pwd
+/var/www/html
+[root@Master-a html]# mkdir import_data
+[root@Master-a html]# cd import_data/
+[root@Master-a import_data]# cp /home/gpadmin/import_data/data500w/table_test.csv .
+[root@Master-a import_data]# ls
+table_test.csv
+[root@Master-a import_data]#
+
+# 访问测试
+[root@Master-a ~]# curl -s http://192.168.7.136/import_data/table_test.csv | head -n 10
+"id","name","age","address","salary"
+"34","KKKKKKKKKKKKKKKK","16",,"3954"
+"53","YYYYYYYYYYYYYYYY","33",,"6884"
+"70","ZZZZZZZZZZZZZZZZ","13",,"2475"
+"75","[[[[[[[[[[[[[[[[","32",,"6818"
+"80","VVVVVVVVVVVVVVVV","32",,"869"
+"93","PPPPPPPPPPPPPPPP","4",,"9570"
+"109","BBBBBBBBBBBBBBBB","19",,"7567"
+"142","CCCCCCCCCCCCCCCC","28",,"8775"
+"143","UUUUUUUUUUUUUUUU","5",,"1298"
+[root@Master-a ~]#
+
+以上可通过代理进行访问数据csv - 但是这种非常不安全！
+```
+
+#### 数据表创建
+
+```powershell
+# 构建数据表创建语句
+test_db=# CREATE EXTERNAL TABLE "public"."data_import_web" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+LOCATION ('http://192.168.7.136/import_data/table_test.csv')
+FORMAT 'CSV' (HEADER)
+;
+
+# 尝试数据表创建
+test_db=# CREATE EXTERNAL TABLE "public"."data_import_web" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+LOCATION ('http://192.168.7.136/import_data/table_test.csv')
+FORMAT 'CSV' (HEADER)
+;
+ERROR:  http URI's can only be used in an external web table
+HINT:  Use CREATE EXTERNAL WEB TABLE instead.
+test_db=# 
+
+提示语法错误 修改一下再次执行
+
+# 再次构建
+test_db=# CREATE EXTERNAL WEB TABLE "public"."data_import_web" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+LOCATION ('http://192.168.7.136/import_data/table_test.csv')
+FORMAT 'CSV' (HEADER)
+;
+
+# 再次尝试数据表创建
+test_db=# CREATE EXTERNAL WEB TABLE "public"."data_import_web" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+LOCATION ('http://192.168.7.136/import_data/table_test.csv')
+FORMAT 'CSV' (HEADER)
+;
+NOTICE:  HEADER means that each one of the data files has a header row
+CREATE EXTERNAL TABLE
+
+# 查看数据
+test_db=# select count(*) from "public"."data_import_web";
+  count
+---------
+ 5000000
+(1 row)
+
+NOTICE:  HEADER means that each one of the data files has a header row
+test_db=# 
+
+数据创建成功！
+
+```
+
+#### 数据修改
+
+![image-20241028152600917](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241028152600917.png)
+
+可以看到报错了，数据以只读的方式进行加载而不是写入到了segment中，如果想写入可以创建内部表然后用 insert in to 的方式进行写入。
+
+#### 服务关联观察
+
+把httpd服务关掉尝试查看数据
+
+```powershell
+# 关闭httpd服务
+[root@Master-a ~]# systemctl disable httpd --now
+Removed symlink /etc/systemd/system/multi-user.target.wants/httpd.service.
+[root@Master-a ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+     Docs: man:httpd(8)
+           man:apachectl(8)
+
+Oct 28 14:43:57 Master-a systemd[1]: Starting The Apache HTTP Server...
+Oct 28 14:43:57 Master-a httpd[2432]: AH00558: httpd: Could not reliably determine the server's fully qualified domain name, usi... message
+Oct 28 14:43:57 Master-a systemd[1]: Started The Apache HTTP Server.
+Oct 28 15:22:35 Master-a systemd[1]: Stopping The Apache HTTP Server...
+Oct 28 15:22:36 Master-a systemd[1]: Stopped The Apache HTTP Server.
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@Master-a ~]#
+
+# 访问测试
+[root@Master-a ~]# curl -s http://192.168.7.136/import_data/table_test.csv | head -n 10
+[root@Master-a ~]#
+
+# 数据库查询测试
+test_db=# select count(*) from "public"."data_import_web";
+ERROR:  connection with gpfdist failed for "http://192.168.7.136/import_data/table_test.csv", effective url: "http://192.168.7.136/import_data/table_test.csv": error code = 111 (Connection refused);  (seg0 slice1 192.168.7.138:6000 pid=7202)
+NOTICE:  HEADER means that each one of the data files has a header row
+test_db=# 
+
+```
+
+#### 总结
+
+可以看到是一个只读的状态，当代理的服务关闭后数据无法进行查看，但是这个是既gpfdist服务的又一种数据读入方式，可见gp数据库对数据库接入有明显的兼容性，为特定环境提供了不同的接入可能性。
+
