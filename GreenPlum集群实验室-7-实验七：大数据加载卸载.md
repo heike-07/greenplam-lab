@@ -854,3 +854,259 @@ test_db=#
 
 可以看到是一个只读的状态，当代理的服务关闭后数据无法进行查看，但是这个是既gpfdist服务的又一种数据读入方式，可见gp数据库对数据库接入有明显的兼容性，为特定环境提供了不同的接入可能性。
 
+### 实验开始-基于script的外部表接入
+
+#### 构建一个数据脚本
+
+```powershell
+[root@Master-a ~]# su gpadmin
+[gpadmin@Master-a root]$ cd ~
+[gpadmin@Master-a ~]$ ls
+conf  data  expand_mirrors  expand_segment_instance  gpAdminLogs  gpconfigs  import_data  output_data  soft
+[gpadmin@Master-a ~]$ cd import_data/
+[gpadmin@Master-a import_data]$ ls
+data500w  data500w_log
+[gpadmin@Master-a import_data]$ cd data500w
+[gpadmin@Master-a data500w]$ ls
+data500w_log  table_test.csv
+[gpadmin@Master-a data500w]$ touch get_script_data.sh
+[gpadmin@Master-a data500w]$ chmod +x get_script_data.sh 
+[gpadmin@Master-a data500w]$ ll get_script_data.sh 
+-rwxrwxr-x 1 gpadmin gpadmin 0 Oct 29 09:21 get_script_data.sh
+
+[gpadmin@Master-a data500w]$ cat << EOF >> get_script_data.sh 
+> #!/bin/bash
+> curl -s http://192.168.7.136/import_data/table_test.csv | tail -n 1000
+> EOF
+[gpadmin@Master-a data500w]$ cat get_script_data.sh 
+
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | tail -n 1000
+[gpadmin@Master-a data500w]$
+
+# 开启脚本关联服务 - 这里还用之前的，因为不爱写新的echo一样的效果
+Last login: Mon Oct 28 11:40:49 2024 from 192.168.7.99
+[root@Master-a ~]# systemctl enable httpd --now
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+[root@Master-a ~]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2024-10-29 09:29:01 CST; 10s ago
+     Docs: man:httpd(8)
+           man:apachectl(8)
+ Main PID: 4929 (httpd)
+   Status: "Total requests: 0; Current requests/sec: 0; Current traffic:   0 B/sec"
+   CGroup: /system.slice/httpd.service
+           ├─4929 /usr/sbin/httpd -DFOREGROUND
+           ├─4930 /usr/sbin/httpd -DFOREGROUND
+           ├─4931 /usr/sbin/httpd -DFOREGROUND
+           ├─4932 /usr/sbin/httpd -DFOREGROUND
+           ├─4933 /usr/sbin/httpd -DFOREGROUND
+           └─4934 /usr/sbin/httpd -DFOREGROUND
+
+Oct 29 09:29:01 Master-a systemd[1]: Starting The Apache HTTP Server...
+Oct 29 09:29:01 Master-a httpd[4929]: AH00558: httpd: Could not reliably determine the server's fully qualified d...essage
+Oct 29 09:29:01 Master-a systemd[1]: Started The Apache HTTP Server.
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@Master-a ~]#
+
+[gpadmin@Master-a data500w]$ ./get_script_data.sh | head -n 10
+"4965080","EEEEEEEEEEEEEEEE","8",,"2328"
+"4965716","WWWWWWWWWWWWWWWW","15",,"7545"
+"4965747","QQQQQQQQQQQQQQQQ","13",,"1758"
+"4966064","TTTTTTTTTTTTTTTT","34",,"8114"
+"4966227","IIIIIIIIIIIIIIII","19",,"5923"
+"4966532","QQQQQQQQQQQQQQQQ","16",,"3246"
+"4966769","VVVVVVVVVVVVVVVV","11",,"8917"
+"4966889","AAAAAAAAAAAAAAAA","27",,"4709"
+"4966913","RRRRRRRRRRRRRRRR","29",,"1377"
+"4966999","KKKKKKKKKKKKKKKK","34",,"586"
+[gpadmin@Master-a data500w]$
+
+查看脚本的数据前10行
+
+# 脚本含义
+[gpadmin@Master-a data500w]$ cat get_script_data.sh 
+
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | tail -n 1000
+[gpadmin@Master-a data500w]$
+
+从这个httpd服务的csv中获取最后的1000条数据
+```
+
+#### 数据表创建
+
+```powershell
+# 脚本同步到其他segment节点相同位置
+[gpadmin@Master-a data500w]$ cat /etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.7.136  Master-a
+192.168.7.137  Standby-a
+192.168.7.138  Segment-a
+192.168.7.139  Segment-b
+192.168.7.141  Segment-c
+192.168.7.140  Segment-d
+[gpadmin@Master-a data500w]$ for host in 192.168.7.{136..141}; do
+> scp ./get_script_data.sh $host:~/
+> done
+get_script_data.sh                                                                      100%   84    63.7KB/s   00:00    
+get_script_data.sh                                                                      100%   84    94.5KB/s   00:00    
+get_script_data.sh                                                                      100%   84   254.4KB/s   00:00    
+get_script_data.sh                                                                      100%   84   173.4KB/s   00:00    
+get_script_data.sh                                                                      100%   84   222.3KB/s   00:00    
+get_script_data.sh                                                                      100%   84   169.5KB/s   00:00    
+[gpadmin@Master-a data500w]$
+
+# 构建数据表语句
+
+CREATE EXTERNAL WEB TABLE "public"."script_data" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+EXECUTE '/home/gpadmin/get_script_data.sh' ON HOST
+FORMAT 'TEXT' (DELIMITER ',');
+
+# 创建数据表
+test_db=# CREATE EXTERNAL WEB TABLE "public"."script_data" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+EXECUTE '/home/gpadmin/get_script_data.sh' ON HOST
+FORMAT 'TEXT' (DELIMITER ',');
+CREATE EXTERNAL TABLE
+
+test_db=# 
+
+# 数据查询
+test_db=# select count(1) from "public"."script_data";
+ERROR:  invalid input syntax for integer: ""4965080""  (seg0 slice1 192.168.7.138:6000 pid=24429)
+CONTEXT:  External table script_data, line 1 of execute:/home/gpadmin/get_script_data.sh, column id
+test_db=# 
+
+# 再次尝试构建数据表
+test_db=# CREATE EXTERNAL WEB TABLE "public"."script_data1" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+EXECUTE '/home/gpadmin/get_script_data.sh' ON HOST
+FORMAT 'CSV' (DELIMITER ',');
+CREATE EXTERNAL TABLE
+
+修改点为 format格式为csv 并指定分隔符为"," 
+
+
+# 数据查询
+test_db=# select count(1) from "public"."script_data1";
+ count
+-------
+  4000
+(1 row)
+
+test_db=# 
+
+数据数量不对，数据segment节点有4个，脚本获取的是1000条数据，也就是数据被执行了4次，有重复数据，我们写一个sql 进行验证
+
+# 数据验证
+test_db=# SELECT * FROM public.script_data1 WHERE id = 4979548;
+   id    |       name       | age | address | salary
+---------+------------------+-----+---------+--------
+ 4979548 | TTTTTTTTTTTTTTTT |  10 |         |   6662
+ 4979548 | TTTTTTTTTTTTTTTT |  10 |         |   6662
+ 4979548 | TTTTTTTTTTTTTTTT |  10 |         |   6662
+ 4979548 | TTTTTTTTTTTTTTTT |  10 |         |   6662
+(4 rows)
+
+test_db=# 
+```
+
+#### 疑问
+
+我对这个功能是失望的，当脚本获取正确的数据时，你的集群有几个segment 就会显示 几个segment*你的数据，也就是查询数据的并集，这显然没有任何意义，数据无意义的重复，可以印证查询是并形的。
+
+#### 修改数据
+
+```powershell
+# 思路创建
+通过获取指定行的数据然后再次创建表尝试，验证并集
+
+[gpadmin@Master-a ~]$ cat union_data.sh 
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | awk 'NR==7'
+[gpadmin@Master-a ~]$ ./union_data.sh 
+"93","PPPPPPPPPPPPPPPP","4",,"9570"
+[gpadmin@Master-a ~]$
+
+# 复制到其他节点
+[gpadmin@Master-a ~]$ for i in 192.168.7.{136..141}; do
+> scp ./union_data.sh $i:~/
+> done
+union_data.sh                                                                           100%   82   366.4KB/s   00:00    
+union_data.sh                                                                           100%   82   139.2KB/s   00:00    
+union_data.sh                                                                           100%   82   213.3KB/s   00:00    
+union_data.sh                                                                           100%   82   193.4KB/s   00:00    
+union_data.sh                                                                           100%   82   196.4KB/s   00:00    
+union_data.sh                                                                           100%   82   206.4KB/s   00:00    
+[gpadmin@Master-a ~]$
+
+# 修改数据
+[gpadmin@Master-a ~]$ ssh Segment-a "sed -i 's/NR==7/NR==8/g' union_data.sh && cat union_data.sh"
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | awk 'NR==8'
+[gpadmin@Master-a ~]$ 
+[gpadmin@Master-a ~]$ ssh Segment-b "sed -i 's/NR==7/NR==9/g' union_data.sh && cat union_data.sh"
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | awk 'NR==9'
+[gpadmin@Master-a ~]$ ssh Segment-c "sed -i 's/NR==7/NR==10/g' union_data.sh && cat union_data.sh"
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | awk 'NR==10'
+[gpadmin@Master-a ~]$ ssh Segment-d "sed -i 's/NR==7/NR==11/g' union_data.sh && cat union_data.sh"
+#!/bin/bash
+curl -s http://192.168.7.136/import_data/table_test.csv | awk 'NR==11'
+[gpadmin@Master-a ~]$
+
+# 建表
+
+test_db=# CREATE EXTERNAL WEB TABLE "public"."script_union_data" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+)
+EXECUTE '/home/gpadmin/union_data.sh' ON HOST
+FORMAT 'CSV' (DELIMITER ',');
+CREATE EXTERNAL TABLE
+
+# 查询数据
+test_db=# SELECT * FROM public.script_union_data WHERE id = 190;
+ id  |       name       | age | address | salary
+-----+------------------+-----+---------+--------
+ 190 | UUUUUUUUUUUUUUUU |   0 |         |   7145
+(1 row)
+
+test_db=# SELECT * FROM public.script_union_data;
+ id  |       name       | age | address | salary
+-----+------------------+-----+---------+--------
+ 190 | UUUUUUUUUUUUUUUU |   0 |         |   7145
+ 109 | BBBBBBBBBBBBBBBB |  19 |         |   7567
+ 143 | UUUUUUUUUUUUUUUU |   5 |         |   1298
+ 142 | CCCCCCCCCCCCCCCC |  28 |         |   8775
+(4 rows)
+
+test_db=# 
+```
+
+#### 总结
+
+这种可以通过在相同名称不同的segment进行并形读取，并最后取交集的方式进行数据录入，提到并发效率。
