@@ -1827,8 +1827,43 @@ GPLOAD:
     - AFTER: "ANALYZE public.data_import_goload"
 EOF
 [gpadmin@Master-a data500w]$
+
 ```
 
+#### 参数解释
+
+> 来源：GLM-4 大模型
+
+这个YAML文件是用于Greenplum的`gpload`工具的配置文件，`gpload`是一个用于高效加载数据的工具。下面是对文件中各个参数的解释：
+
+##### 版本
+- `VERSION`: 配置文件的版本号。
+##### 数据库连接
+- `DATABASE`: 指定要加载数据的目标数据库的名称。
+- `USER`: 指定连接到数据库的用户名。
+- `HOST`: 指定数据库服务器的地址。
+- `PORT`: 指定数据库服务器的端口号。
+##### GPLOAD
+###### INPUT
+- `SOURCE`: 指定输入数据的来源。
+  - `LOCAL_HOSTNAME`: 指定运行`gpload`的主机名。
+  - `PORT`: 指定监听端口，`gpload`将从这个端口接收数据。
+  - `FILE`: 指定要加载的本地文件路径。
+- `COLUMNS`: 定义输入文件中每列的数据类型和表中的列名对应关系。
+  - `id: int`: 列`id`的数据类型为整数。
+  - `name: text`: 列`name`的数据类型为文本。
+  - `age: int4`: 列`age`的数据类型为4字节整数。
+  - `address: char`: 列`address`的数据类型为字符。
+  - `salary: float4`: 列`salary`的数据类型为4字节浮点数。
+- `FORMAT`: 指定输入文件的格式，这里是CSV。
+- `ERROR_LIMIT`: 允许的最大错误数，超过这个数量将停止加载。
+- `error_table`: 指定一个表来存储加载过程中出现的错误。
+###### OUTPUT
+- `TABLE`: 指定要插入数据的表名。
+- `MODE`: 指定数据的加载模式，这里是`INSERT`，意味着数据将被插入到表中。
+###### SQL
+- `BEFORE`: 在加载数据之前执行的SQL语句，这里是清空表`public.data_import_goload`。
+- `AFTER`: 在加载数据之后执行的SQL语句，这里是分析表`public.data_import_goload`以更新统计信息。
 #### 执行gpload
 
 ```powershell
@@ -1922,4 +1957,71 @@ test_db=#
 发现打不开了，但是数据已经写入进去了
 
 ### 实验开始-COPY
+
+copy实际上是postgres数据库的命令参数，它可以快速的将数据进行导入以及导出，常见的文件支持格式是txt，csv，sql也可以支持压缩文件等。
+
+语法是copy to 可以把表中的文件卸载到一个文件中；copy from 可以从一个文件加载数据到表中，需要注意的是该方法只能操作真实的表不能操作视图等虚拟层的东西。
+
+#### 数据导入
+
+##### 数据准备
+
+还是用原来的500w的数据集
+
+```powershell
+[gpadmin@Master-a ~]$ cd import_data/data500w
+[gpadmin@Master-a data500w]$ ls
+data500w_log  data_gpload.yml  get_script_data.sh  table_test.csv
+[gpadmin@Master-a data500w]$
+```
+
+###### 创建表
+
+```sql
+-- 构建表结构
+CREATE TABLE "public"."data_import_copy" (
+  "id" int4,
+  "name" text,
+  "age" int4,
+  "address" char(50),
+  "salary" float4
+);
+```
+
+![image-20241118155011613](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241118155011613.png)
+
+这个提示依然是分布键，使用id作为分布键，这表是创建成功了，接下来通过copy将数据导入进去。
+
+###### 数据导入
+
+```powershell
+# 数据导入
+COPY "public".data_import_copy 
+FROM '/home/gpadmin/import_data/data500w/table_test.csv'
+WITH (FORMAT CSV, HEADER true, DELIMITER ',');
+```
+
+![image-20241118170021765](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241118170021765.png)
+
+###### 数据查询
+
+```sql
+-- 查询数据条数
+SELECT COUNT
+	( 1 ) 
+FROM
+	"public".data_import_copy;
+-- 查询数据质量	
+SELECT
+	* 
+FROM
+	"public".data_import_copy
+LIMIT 10;
+```
+
+![image-20241118170205272](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241118170205272.png)
+
+![image-20241118170524280](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241118170524280.png)
+
+这个结果还是比较满意的，4.75s 500w的数据，虽然数据长度不大，但是数据量不小。
 
