@@ -2025,3 +2025,195 @@ LIMIT 10;
 
 这个结果还是比较满意的，4.75s 500w的数据，虽然数据长度不大，但是数据量不小。
 
+#### 数据导出
+
+##### 数据准备
+
+就使用刚刚导入的数据就行
+
+##### 导出全部数据
+
+```sql
+-- 导出全部数据
+COPY data_import_copy
+TO '/home/gpadmin/output_data/copy_data/copy_out.csv'
+WITH ( 	FORMAT 'csv', DELIMITER ',', HEADER true );
+```
+
+![image-20241119094639621](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119094639621.png)
+
+###### 查看全部数据导出结果
+
+```powershell
+# 查看数据条数
+[gpadmin@Master-a copy_data]$ wc -l copy_out.csv 
+5000001 copy_out.csv
+[gpadmin@Master-a copy_data]$
+
+# 查看表头
+[gpadmin@Master-a copy_data]$ head -n 10 copy_out.csv 
+id,name,age,address,salary
+34,KKKKKKKKKKKKKKKK,16,,3954
+15,YYYYYYYYYYYYYYYY,6,,7837
+56,WWWWWWWWWWWWWWWW,27,,60
+55,NNNNNNNNNNNNNNNN,23,,5712
+103,TTTTTTTTTTTTTTTT,2,,4043
+97,FFFFFFFFFFFFFFFF,9,,7989
+381,IIIIIIIIIIIIIIII,10,,5180
+3,JJJJJJJJJJJJJJJJ,30,,4605
+29,QQQQQQQQQQQQQQQQ,9,,5830
+[gpadmin@Master-a copy_data]$
+```
+
+##### 导出部分列数据
+
+```sql
+-- 导出部分列数据
+COPY data_import_copy (id,name,salary)
+TO '/home/gpadmin/output_data/copy_data/copy_out_list.csv'
+WITH ( 	FORMAT 'csv', DELIMITER ',', HEADER true );
+```
+
+![image-20241119095208259](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119095208259.png)
+
+###### 查看部分列数据
+
+```powershell
+[gpadmin@Master-a copy_data]$ wc -l copy_out_list.csv 
+5000001 copy_out_list.csv
+[gpadmin@Master-a copy_data]$ head -n 10 copy_out_list.csv 
+id,name,salary
+34,KKKKKKKKKKKKKKKK,3954
+15,YYYYYYYYYYYYYYYY,7837
+56,WWWWWWWWWWWWWWWW,60
+55,NNNNNNNNNNNNNNNN,5712
+103,TTTTTTTTTTTTTTTT,4043
+97,FFFFFFFFFFFFFFFF,7989
+381,IIIIIIIIIIIIIIII,5180
+3,JJJJJJJJJJJJJJJJ,4605
+29,QQQQQQQQQQQQQQQQ,5830
+[gpadmin@Master-a copy_data]$
+```
+
+##### 导出查询条件数据
+
+```sql
+-- 构建查询语句
+SELECT * FROM data_import_copy WHERE "name" = 'YYYYYYYYYYYYYYYY'
+
+-- 导出查询条件数据
+-- 导出查询条件数据
+COPY (
+	SELECT id,name,age,address,salary 
+	FROM data_import_copy
+	WHERE 'name' = 'YYYYYYYYYYYYYYYY'
+)
+TO '/home/gpadmin/output_data/copy_data/copy_out_select_Y.csv'
+WITH ( 
+	FORMAT 'csv',
+	DELIMITER ',',
+	HEADER true
+);
+```
+
+![image-20241119100225083](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119100225083.png)
+
+###### 查看查询条件数据
+
+```powershell
+[gpadmin@Master-a copy_data]$ head -n 10 copy_out_select_Y.csv 
+id,name,age,address,salary
+[gpadmin@Master-a copy_data]$ ll
+total 307968
+-rw-r--r-- 1 gpadmin gpadmin 167017081 Nov 19 09:46 copy_out.csv
+-rw-r--r-- 1 gpadmin gpadmin 148335757 Nov 19 09:52 copy_out_list.csv
+-rw-r--r-- 1 gpadmin gpadmin        27 Nov 19 10:02 copy_out_select_Y.csv
+[gpadmin@Master-a copy_data]$
+
+数据异常，找下原因
+调整生成语句
+
+-- 导出查询条件数据
+COPY (
+	SELECT id,name,age,address,salary 
+	FROM data_import_copy
+	WHERE name = 'YYYYYYYYYYYYYYYY'
+)
+TO '/home/gpadmin/output_data/copy_data/copy_out_select_Y.csv'
+WITH ( 
+	FORMAT 'csv',
+	DELIMITER ',',
+	HEADER true
+);
+
+调整内容为 name 去掉 ''单引号，否则为字符串
+
+```
+
+![image-20241119100517178](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119100517178.png)
+
+数据量查看
+
+![image-20241119100552916](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119100552916.png)
+
+```powershell
+[gpadmin@Master-a copy_data]$ head -n 10 copy_out_select_Y.csv 
+id,name,age,address,salary
+514,YYYYYYYYYYYYYYYY,17,,7639
+1046,YYYYYYYYYYYYYYYY,36,,4596
+1903,YYYYYYYYYYYYYYYY,24,,3787
+2962,YYYYYYYYYYYYYYYY,17,,6207
+3137,YYYYYYYYYYYYYYYY,8,,1739
+4053,YYYYYYYYYYYYYYYY,35,,1853
+76,YYYYYYYYYYYYYYYY,19,,2249
+1307,YYYYYYYYYYYYYYYY,33,,9116
+3574,YYYYYYYYYYYYYYYY,33,,6245
+[gpadmin@Master-a copy_data]$ wc -l copy_out_select_Y.csv 
+192407 copy_out_select_Y.csv
+[gpadmin@Master-a copy_data]$
+
+数据正常！ （192406 192407 差值1为表头行）
+```
+
+#####导出特定条数数据
+
+```sql
+-- 导出特定条数数据
+COPY (
+	SELECT * 
+	FROM data_import_copy
+	WHERE name = 'RRRRRRRRRRRRRRRR' LIMIT 10
+)
+TO '/home/gpadmin/output_data/copy_data/copy_out_select_R10.csv'
+WITH ( 
+	FORMAT 'csv',
+	DELIMITER ',',
+	HEADER true
+);
+```
+
+![image-20241119115220835](GreenPlum集群实验室-7-实验七：大数据加载卸载.assets/image-20241119115220835.png)
+
+###### 查看特定条数数据
+
+```powershell
+[gpadmin@Master-a copy_data]$ cat copy_out_select_R10.csv 
+id,name,age,address,salary
+803,RRRRRRRRRRRRRRRR,36,,1121
+5604,RRRRRRRRRRRRRRRR,10,,8546
+14,RRRRRRRRRRRRRRRR,6,,8818
+67,RRRRRRRRRRRRRRRR,29,,1584
+2596,RRRRRRRRRRRRRRRR,1,,969
+774,RRRRRRRRRRRRRRRR,29,,293
+4242,RRRRRRRRRRRRRRRR,9,,4722
+5814,RRRRRRRRRRRRRRRR,30,,6175
+8155,RRRRRRRRRRRRRRRR,2,,5953
+6379,RRRRRRRRRRRRRRRR,7,,8357
+[gpadmin@Master-a copy_data]$
+```
+
+## 总结
+
+通过多种方式可以实现对大数据的加载和卸载
+
+END
