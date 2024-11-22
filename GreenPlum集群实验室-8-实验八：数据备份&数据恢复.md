@@ -6,17 +6,23 @@
 
 ## 实验八：数据备份&数据恢复
 
-### postgres原生自带
+### 数据SQL操作
 
-#### Gp_dump
+#### Pg_dump导出数据SQL
 
-#### Gp_restore
+#### Psql导出数据SQL
 
-### 第三方工具类
+#### 数据SQL导入
 
-#### Gpbackup
+### 数据库备份
 
-#### Gprestore
+#### 使用gpcrondump备份
+
+#### 使用gpdbrestore恢复
+
+
+
+
 
 
 
