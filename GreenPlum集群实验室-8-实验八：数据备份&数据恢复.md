@@ -596,9 +596,223 @@ GRANT
 
 ### 数据库备份
 
-#### 使用gpcrondump备份
+#### 插件下载
 
-#### 使用gpdbrestore恢复
+参考V6.23 Documentatuion 中 （gpbackup, gprestore, and related utilities are provided as a separate download, VMware Tanzu™ Greenplum® Backup and Restore. Follow the instructions in the VMware Tanzu Greenplum Backup and Restore Documentation to install and use these utilities.）需要单独进行下载。
+
+![image-20241204141511052](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204141511052.png)
+
+![image-20241204142021156](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204142021156.png)
+
+对于版本，选择最大的版本， Greenplum Backup and Restore 1.30.7，然后选择对应操作系统以及GP的版本。
+
+![image-20241204143402176](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204143402176.png)
+
+填写核查信息（需要根据自己的账户来进行核查)
+
+![image-20241204143632043](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204143632043.png)
+
+下载完成
+
+![image-20241204143718148](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204143718148.png)
+
+#### 插件安装
+
+查看下如何安装 https://techdocs.broadcom.com/us/en/vmware-tanzu/data-solutions/tanzu-greenplum-backup-and-restore/1-30/greenplum-backup-and-restore/backup-restore-install.html
+
+![image-20241204143759255](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204143759255.png)
+
+Copy the `gppkg` file you downloaded to the gpadmin user's home directory on the Greenplum Database coordinator host. ，根据文档提示，需要下载到coordinator也就是master的主文件夹内，并进行安装。
+
+```powershell
+# 创建gppkg插件存放位置文件夹
+[gpadmin@Master-a ~]$ mkdir gppkg
+[gpadmin@Master-a ~]$ cd gppkg
+[gpadmin@Master-a gppkg]$ cp ../greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg .
+[gpadmin@Master-a gppkg]$ ls
+greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+[gpadmin@Master-a gppkg]$ ll
+total 18948
+-rw-r--r-- 1 gpadmin gpadmin 19401617 Dec  4 15:10 greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+[gpadmin@Master-a gppkg]$
+
+# Install
+[gpadmin@Master-a gppkg]$ gppkg -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg 
+20241204:15:12:54:008265 gppkg:Master-a:gpadmin-[INFO]:-Starting gppkg with args: -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:12:54:008265 gppkg:Master-a:gpadmin-[INFO]:-Installing package greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:12:54:008265 gppkg:Master-a:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-6.13.0/.tmp/gpbackup_tools_RHEL7-1.30.7-1.x86_64.rpm --dbpath /usr/local/greenplum-db-6.13.0/share/packages/database --prefix /usr/local/greenplum-db-6.13.0'
+20241204:15:12:58:008265 gppkg:Master-a:gpadmin-[CRITICAL]:-Error occurred: non-zero rc: 1
+ Command was: '/bin/scp greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg Standby-a:/usr/local/greenplum-db-6.13.0/greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg'
+rc=1, stdout='', stderr='scp: /usr/local/greenplum-db-6.13.0/greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg: Permission denied
+'
+[gpadmin@Master-a gppkg]$
+
+error了，这...看问题是没有权限，需要root权限执行
+
+# 再次执行(root)
+[gpadmin@Master-a greenplum-db]$ exit
+exit
+[root@Master-a local]# cd /home/gpadmin/
+[root@Master-a gpadmin]# ls
+conf            expand_segment_instance  gpconfigs    output_data  union_data.sh
+data            get_script_data.sh       gppkg        output_sql
+expand_mirrors  gpAdminLogs              import_data  soft
+[root@Master-a gpadmin]# cd gppkg/
+[root@Master-a gppkg]# ls
+greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+[root@Master-a gppkg]#
+
+不对应该是要放到gp程序目录执行，root带入不了环境变量。
+
+[root@Master-a gpadmin]# su gpadmin
+
+[gpadmin@Master-a ~]$ cd ~
+[gpadmin@Master-a ~]$ cd /usr/local/greenplum-db-6.13.0/
+[gpadmin@Master-a greenplum-db-6.13.0]$ cp /home/gpadmin/gppkg/greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg .
+[gpadmin@Master-a greenplum-db-6.13.0]$ ls
+bin
+COPYRIGHT
+docs
+etc
+ext
+greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+greenplum_path.sh
+include
+lib
+libexec
+LICENSE
+NOTICE
+open_source_license_greenplum_database.txt
+sbin
+share
+[gpadmin@Master-a greenplum-db-6.13.0]$
+
+[gpadmin@Master-a greenplum-db-6.13.0]$ gppkg -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg 
+20241204:15:22:53:009605 gppkg:Master-a:gpadmin-[INFO]:-Starting gppkg with args: -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:22:53:009605 gppkg:Master-a:gpadmin-[INFO]:-Installing package greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:22:53:009605 gppkg:Master-a:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-6.13.0/.tmp/gpbackup_tools_RHEL7-1.30.7-1.x86_64.rpm --dbpath /usr/local/greenplum-db-6.13.0/share/packages/database --prefix /usr/local/greenplum-db-6.13.0'
+20241204:15:22:55:009605 gppkg:Master-a:gpadmin-[CRITICAL]:-Error occurred: non-zero rc: 1
+ Command was: '/bin/scp greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg Standby-a:/usr/local/greenplum-db-6.13.0/greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg'
+rc=1, stdout='', stderr='scp: /usr/local/greenplum-db-6.13.0/greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg: Permission denied
+'
+[gpadmin@Master-a greenplum-db-6.13.0]$
+
+依然报错,找到问题了，问题出在Stabdby-a,提示说是权限不足，那就查看一下权限
+
+[root@Standby-a local]# ll
+total 0
+drwxr-xr-x.  2 root root   6 Apr 11  2018 bin
+drwxr-xr-x.  2 root root   6 Apr 11  2018 etc
+drwxr-xr-x.  2 root root   6 Apr 11  2018 games
+lrwxrwxrwx   1 root root  30 Aug  7 13:37 greenplum-db -> /usr/local/greenplum-db-6.13.0
+drwxr-xr-x  11 root root 238 Aug  7 13:37 greenplum-db-6.13.0
+drwxr-xr-x.  2 root root   6 Apr 11  2018 include
+
+发现standby-a节点是root权限，这个应该是没有改当时，只是起到backup的作用。
+
+# 根据报错修改Standby-a节点权限
+[root@Standby-a local]# chown -R gpadmin:gpadmin greenplum-db*
+[root@Standby-a local]# ll
+total 0
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 bin
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 etc
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 games
+lrwxrwxrwx   1 gpadmin gpadmin  30 Aug  7 13:37 greenplum-db -> /usr/local/greenplum-db-6.13.0
+drwxr-xr-x  11 gpadmin gpadmin 238 Aug  7 13:37 greenplum-db-6.13.0
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 include
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 lib
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 lib64
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 libexec
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 sbin
+drwxr-xr-x.  5 root    root     49 Jun  4  2024 share
+drwxr-xr-x.  2 root    root      6 Apr 11  2018 src
+[root@Standby-a local]#
+
+# 再次尝试（gpadmin）
+[gpadmin@Master-a greenplum-db-6.13.0]$ gppkg -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg 
+20241204:15:27:47:009940 gppkg:Master-a:gpadmin-[INFO]:-Starting gppkg with args: -i greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:27:48:009940 gppkg:Master-a:gpadmin-[INFO]:-Installing package greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg
+20241204:15:27:48:009940 gppkg:Master-a:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-6.13.0/.tmp/gpbackup_tools_RHEL7-1.30.7-1.x86_64.rpm --dbpath /usr/local/greenplum-db-6.13.0/share/packages/database --prefix /usr/local/greenplum-db-6.13.0'
+20241204:15:27:52:009940 gppkg:Master-a:gpadmin-[INFO]:-Installing greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg locally
+20241204:15:27:52:009940 gppkg:Master-a:gpadmin-[INFO]:-Validating rpm installation cmdStr='rpm --test -i /usr/local/greenplum-db-6.13.0/.tmp/gpbackup_tools_RHEL7-1.30.7-1.x86_64.rpm --dbpath /usr/local/greenplum-db-6.13.0/share/packages/database --prefix /usr/local/greenplum-db-6.13.0'
+20241204:15:27:52:009940 gppkg:Master-a:gpadmin-[INFO]:-Installing rpms cmdStr='rpm -i --force /usr/local/greenplum-db-6.13.0/.tmp/gpbackup_tools_RHEL7-1.30.7-1.x86_64.rpm --dbpath /usr/local/greenplum-db-6.13.0/share/packages/database --prefix=/usr/local/greenplum-db-6.13.0'
+20241204:15:27:53:009940 gppkg:Master-a:gpadmin-[INFO]:-Completed local installation of greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg.
+20241204:15:27:53:009940 gppkg:Master-a:gpadmin-[INFO]:-gpbackup 1.30.7 successfully installed
+20241204:15:27:53:009940 gppkg:Master-a:gpadmin-[INFO]:-greenplum_backup_restore-1.30.7-gp6-rhel7-x86_64.gppkg successfully installed.
+[gpadmin@Master-a greenplum-db-6.13.0]$
+
+这个命令执行了，尝试安装gppkg插件包，执行rpm -test -i 测试通过后，通过-i --force 进行安装，安装是全部节点进行安装的，全部安装完成后提示 successfully，安装成功
+看一下文件发生了哪些变化
+```
+
+![image-20241204152939660](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204152939660.png)
+
+![image-20241204153213991](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204153213991.png)
+
+```powershell
+可以看到各节点的bin都有gpbackup和gprestore相关工具了
+
+# 尝试运行gpbackup
+[gpadmin@Master-a docs]$ gpbackup
+Error: required flag(s) "dbname" not set
+Usage:
+  gpbackup [flags]
+
+Flags:
+      --backup-dir string            The absolute path of the directory to which all backup files will be written
+      --compression-level int        Level of compression to use during data backup. Range of valid values depends on compression type (default 1)
+      --compression-type string      Type of compression to use during data backup. Valid values are 'gzip', 'zstd' (default "gzip")
+      --copy-queue-size int          number of COPY commands gpbackup should enqueue when backing up using the --single-data-file option (default 1)
+      --data-only                    Only back up data, do not back up metadata
+      --dbname string                The database to be backed up
+      --debug                        Print verbose and debug log messages
+      --exclude-schema stringArray   Back up all metadata except objects in the specified schema(s). --exclude-schema can be specified multiple times.
+      --exclude-schema-file string   A file containing a list of schemas to be excluded from the backup
+      --exclude-table stringArray    Back up all metadata except the specified table(s). --exclude-table can be specified multiple times.
+      --exclude-table-file string    A file containing a list of fully-qualified tables to be excluded from the backup
+      --from-timestamp string        A timestamp to use to base the current incremental backup off
+      --help                         Help for gpbackup
+      --include-schema stringArray   Back up only the specified schema(s). --include-schema can be specified multiple times.
+      --include-schema-file string   A file containing a list of schema(s) to be included in the backup
+      --include-table stringArray    Back up only the specified table(s). --include-table can be specified multiple times.
+      --include-table-file string    A file containing a list of fully-qualified tables to be included in the backup
+      --incremental                  Only back up data for AO tables that have been modified since the last backup
+      --jobs int                     The number of parallel connections to use when backing up data (default 1)
+      --leaf-partition-data          For partition tables, create one data file per leaf partition instead of one data file for the whole table
+      --metadata-only                Only back up metadata, do not back up data
+      --no-compression               Skip compression of data files
+      --no-history                   Do not write a backup entry to the gpbackup_history database
+      --no-inherits                  For a filtered backup, don't back up all tables that inherit included tables
+      --plugin-config string         The configuration file to use for a plugin
+      --quiet                        Suppress non-warning, non-error log messages
+      --single-backup-dir            Back up all data to a single directory instead of split by segment
+      --single-data-file             Back up all data to a single file instead of one per table
+      --verbose                      Print verbose log messages
+      --version                      Print version number and exit
+      --with-stats                   Back up query plan statistics
+      --without-globals              Skip backup of global metadata
+
+[gpadmin@Master-a docs]$
+
+提示缺少参数，证明可以用了
+
+# 尝试运行gprestore
+[gpadmin@Master-a docs]$ gprestore 
+20241204:15:36:29 gprestore:gpadmin:Master-a:010615-[CRITICAL]:-Must provide --backup-dir if --timestamp is not provided
+20241204:15:36:29 gprestore:gpadmin:Master-a:010615-[INFO]:-Beginning cleanup
+20241204:15:36:29 gprestore:gpadmin:Master-a:010615-[INFO]:-Cleanup complete
+[gpadmin@Master-a docs]$
+
+可以用了。
+```
+
+#### gpbackup备份
+
+
+
+#### gprestore恢复
+
+
 
 
 
