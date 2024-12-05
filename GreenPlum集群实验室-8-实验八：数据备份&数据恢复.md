@@ -594,9 +594,11 @@ GRANT
 
 可以看到数据SQL操作greenplum数据库可以进行sql的导出和导入，sql导出使用pg_dump导出后使用psql 进行导入可以解决生产环境中数据导入导出的简单需求，本次只做了单库单表导出和单库全表导出2个方向，其他方式根据具体情况修改参数即可。
 
-### 数据库备份
+### 数据库备份与恢复
 
-#### 插件下载
+#### 软件安装
+
+##### 插件下载
 
 参考V6.23 Documentatuion 中 （gpbackup, gprestore, and related utilities are provided as a separate download, VMware Tanzu™ Greenplum® Backup and Restore. Follow the instructions in the VMware Tanzu Greenplum Backup and Restore Documentation to install and use these utilities.）需要单独进行下载。
 
@@ -616,7 +618,7 @@ GRANT
 
 ![image-20241204143718148](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241204143718148.png)
 
-#### 插件安装
+##### 插件安装
 
 查看下如何安装 https://techdocs.broadcom.com/us/en/vmware-tanzu/data-solutions/tanzu-greenplum-backup-and-restore/1-30/greenplum-backup-and-restore/backup-restore-install.html
 
@@ -806,11 +808,171 @@ Flags:
 可以用了。
 ```
 
-#### gpbackup备份
+#### 单个数据库-全量备份与恢复
+
+##### 开始全量备份
+
+完整性备份参考文档：https://techdocs.broadcom.com/us/en/vmware-tanzu/data-solutions/tanzu-greenplum-backup-and-restore/1-30/greenplum-backup-and-restore/admin_guide-managing-backup-gpbackup.html
+
+```powershell
+要对数据库以及 Greenplum 数据库系统元数据进行完整备份，请使用以下命令：
+
+[gpadmin@Master-a docs]$ gpbackup --dbname backup_test_database
+20241205:10:36:48 gpbackup:gpadmin:Master-a:066002-[INFO]:-gpbackup version = 1.30.7
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Starting backup of database backup_test_database
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Backup Timestamp = 20241205103649
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Backup Database = backup_test_database
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Gathering table state information
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Acquiring ACCESS SHARE locks on tables
+Locks acquired:  10 / 10 [==============================================================] 100.00% 0s
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Gathering additional table metadata
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Getting partition definitions
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Getting storage information
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Getting child partitions with altered schema
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Metadata will be written to /home/gpadmin/data/master/gpseg-1/backups/20241205/20241205103649/gpbackup_20241205103649_metadata.sql
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Writing global database metadata
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Global database metadata backup complete
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Writing pre-data metadata
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Pre-data metadata metadata backup complete
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Writing post-data metadata
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Post-data metadata backup complete
+20241205:10:36:49 gpbackup:gpadmin:Master-a:066002-[INFO]:-Writing data to file
+Tables backed up:  10 / 10 [============================================================] 100.00% 8s
+20241205:10:36:58 gpbackup:gpadmin:Master-a:066002-[INFO]:-Data backup complete
+20241205:10:36:59 gpbackup:gpadmin:Master-a:066002-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241205:10:36:59 gpbackup:gpadmin:Master-a:066002-[INFO]:-Email containing gpbackup report /home/gpadmin/data/master/gpseg-1/backups/20241205/20241205103649/gpbackup_20241205103649_report will not be sent
+20241205:10:36:59 gpbackup:gpadmin:Master-a:066002-[INFO]:-Beginning cleanup
+20241205:10:36:59 gpbackup:gpadmin:Master-a:066002-[INFO]:-Cleanup complete
+20241205:10:36:59 gpbackup:gpadmin:Master-a:066002-[INFO]:-Backup completed successfully
+[gpadmin@Master-a docs]$
+```
+
+查看Segment-a节点发现了备份内容
+
+![image-20241205104011514](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205104011514.png)
+
+查看Segment-b节点发现了备份内容
+
+![image-20241205104718804](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205104718804.png)
+
+查看Segment-c节点发现了备份内容
+
+![image-20241205104920358](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205104920358.png)
+
+查看Segment-d节点发现了备份内容
+
+![image-20241205105054086](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205105054086.png)
+
+查看Master-a节点发现了备份内容
+
+![image-20241205104201889](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205104201889.png)
+
+查看Standby-a节点**没有发现**备份内容
+
+![image-20241205104347383](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205104347383.png)
+
+由此可以看到，backup被平均分配到了各节点的各文件夹中。
+
+查看报告
+
+![image-20241205114323486](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205114323486.png)
+
+可以看到备份已经完成，且据有详细的报告。
+
+##### 删除已经备份的数据库
+
+![image-20241205105549418](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205105549418.png)
+
+通过数据库工具对数据库进行删除操作
+
+![image-20241205105628613](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205105628613.png)
+
+报错了，提示说有其他程序正在访问，有2个会话在访问，那么我们就关闭这个。
+
+![image-20241205105907877](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205105907877.png)
+
+再次尝试删除
+
+![image-20241205105936040](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205105936040.png)
+
+依然提示这个，我们看下进程，进程中没有异常，再次尝试删除
+
+![image-20241205110508610](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205110508610.png)
+
+通过命令行删除
+
+![image-20241205111216298](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205111216298.png)
+
+提示依旧，那就看下是谁在占用。
+
+![image-20241205111323399](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205111323399.png)
+
+就是navicat在用，关闭后进程就没有了，但是我采用函数的方式断掉链接。
+
+![image-20241205111522817](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205111522817.png)
+
+进程消失，继续删除数据库。
+
+![image-20241205111610695](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205111610695.png)
+
+数据库删除成功
+
+##### 恢复单个数据库
+
+要使用`gprestore`从备份集恢复，您必须使用`--timestamp`选项指定要恢复的准确时间戳值 ( `YYYYMMDDHHMMSS`)。`--create-db`如果数据库在集群中不存在，请包含该选项。
+
+```powershell
+# 删除数据库
+[gpadmin@Master-a 20241205103649]$ dropdb backup_test_database
+dropdb: database removal failed: ERROR:  database "backup_test_database" does not exist
+[gpadmin@Master-a 20241205103649]$
+
+因为已经删除了，所有这个提示不存在了，是正确的，我们继续
+
+# 恢复数据库
+首先要获取时间戳，这里时间戳就是文件夹的名称 20241205103649，我们来构建我们的数据库恢复命令。
+
+[gpadmin@Master-a ~]$ gprestore --timestamp 20241205103649 --create-db
+20241205:11:21:18 gprestore:gpadmin:Master-a:068682-[INFO]:-Restore Key = 20241205103649
+20241205:11:21:18 gprestore:gpadmin:Master-a:068682-[INFO]:-gpbackup version = 1.30.7
+20241205:11:21:18 gprestore:gpadmin:Master-a:068682-[INFO]:-gprestore version = 1.30.7
+20241205:11:21:18 gprestore:gpadmin:Master-a:068682-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241205:11:21:18 gprestore:gpadmin:Master-a:068682-[INFO]:-Creating database
+20241205:11:21:19 gprestore:gpadmin:Master-a:068682-[INFO]:-Database creation complete for: backup_test_database
+20241205:11:21:19 gprestore:gpadmin:Master-a:068682-[INFO]:-Restoring pre-data metadata
+Pre-data objects restored:  66 / 66 [===================================================] 100.00% 0s
+20241205:11:21:20 gprestore:gpadmin:Master-a:068682-[INFO]:-Pre-data metadata restore complete
+Table data loads restored:  10 / 10 [==================================================] 100.00% 16s
+20241205:11:21:36 gprestore:gpadmin:Master-a:068682-[INFO]:-Data restore complete
+20241205:11:21:36 gprestore:gpadmin:Master-a:068682-[INFO]:-Restoring post-data metadata
+Post-data objects restored:  10 / 10 [=================================================] 100.00% 14s
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Post-data metadata restore complete
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Email containing gprestore report /home/gpadmin/data/master/gpseg-1/backups/20241205/20241205103649/gprestore_20241205103649_20241205112118_report will not be sent
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Beginning cleanup
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Cleanup complete
+20241205:11:21:51 gprestore:gpadmin:Master-a:068682-[INFO]:-Restore completed successfully
+[gpadmin@Master-a ~]$
+
+恢复成功
+```
+
+##### 查看恢复结果
+
+![image-20241205112556175](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205112556175.png)
+
+数据正常，但是有个问题，备份数据和运行数据在一个硬盘也就是segment下，如果硬盘损坏那么备份数据也会丢失，这个情况，我们采取异地的方式进行处理，但是备份这么多写一个脚本去把数据进行汇总吗，并不用那么麻烦，gpbackup已经帮我们想到这个问题了只需要增加一个参数即可。
+
+##### 异地备份-开始全量备份
 
 
 
-#### gprestore恢复
+#### 单个数据库-增量备份与恢复
+
+全量备份备份时间长，在业务变动频繁的情况下就不是最有的选择了，因此我们可以进行增量备份
+
+增量备份参考文档：
 
 
 
