@@ -964,9 +964,60 @@ Post-data objects restored:  10 / 10 [==========================================
 
 数据正常，但是有个问题，备份数据和运行数据在一个硬盘也就是segment下，如果硬盘损坏那么备份数据也会丢失，这个情况，我们采取异地的方式进行处理，但是备份这么多写一个脚本去把数据进行汇总吗，并不用那么麻烦，gpbackup已经帮我们想到这个问题了只需要增加一个参数即可。
 
-##### 异地备份-开始全量备份
+##### 扩展-异地备份
 
+```powershell
+# 全量备份
+[gpadmin@Master-a ~]$ mkdir backups
+[gpadmin@Master-a ~]$ cd backups/
+[gpadmin@Master-a backups]$ gpbackup --dbname test_db --backup-dir /home/gpadmin/backups
+20241205:14:28:22 gpbackup:gpadmin:Master-a:078132-[INFO]:-gpbackup version = 1.30.7
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Starting backup of database test_db
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Backup Timestamp = 20241205142822
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Backup Database = test_db
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Gathering table state information
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Acquiring ACCESS SHARE locks on tables
+Locks acquired:  8 / 8 [================================================================] 100.00% 0s
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Gathering additional table metadata
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Getting partition definitions
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Getting storage information
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Getting child partitions with altered schema
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Metadata will be written to /home/gpadmin/backups/gpseg-1/backups/20241205/20241205142822/gpbackup_20241205142822_metadata.sql
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Writing global database metadata
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Global database metadata backup complete
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Writing pre-data metadata
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Pre-data metadata metadata backup complete
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Writing post-data metadata
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Post-data metadata backup complete
+20241205:14:28:23 gpbackup:gpadmin:Master-a:078132-[INFO]:-Writing data to file
+Tables backed up:  4 / 4 [==============================================================] 100.00% 3s
+20241205:14:28:26 gpbackup:gpadmin:Master-a:078132-[INFO]:-Data backup complete
+20241205:14:28:26 gpbackup:gpadmin:Master-a:078132-[INFO]:-Skipped data backup of 4 external/foreign table(s).
+20241205:14:28:26 gpbackup:gpadmin:Master-a:078132-[INFO]:-See /home/gpadmin/gpAdminLogs/gpbackup_20241205.log for a complete list of skipped tables.
+20241205:14:28:27 gpbackup:gpadmin:Master-a:078132-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241205:14:28:27 gpbackup:gpadmin:Master-a:078132-[INFO]:-Email containing gpbackup report /home/gpadmin/backups/gpseg-1/backups/20241205/20241205142822/gpbackup_20241205142822_report will not be sent
+20241205:14:28:27 gpbackup:gpadmin:Master-a:078132-[INFO]:-Beginning cleanup
+20241205:14:28:27 gpbackup:gpadmin:Master-a:078132-[INFO]:-Cleanup complete
+20241205:14:28:27 gpbackup:gpadmin:Master-a:078132-[INFO]:-Backup completed successfully
+[gpadmin@Master-a backups]$
 
+# 查看备份数据
+```
+
+![image-20241205143118172](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205143118172.png)
+
+![image-20241205143135965](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205143135965.png)
+
+其他节点忽略展示，原理都是在相同位置进行了backups文件夹的创建，那么我们就可以规划一下：
+
+每一台Segment节点中
+
+![image-20241205143324566](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241205143324566.png)
+
+新增一块硬盘 挂载到 /backup，那么这样，就可以实现异地备份了，至于备份的位置就可以因人因项目因规划而异了，可以传输到S3也可以传输到OSS总之前提需要实现挂载位置的自定义。
+
+恢复时如果对时间和性能有要求，可以在恢复时增加--jobs 4 数值根据CPU的线程进行设置即可。
 
 #### 单个数据库-增量备份与恢复
 
