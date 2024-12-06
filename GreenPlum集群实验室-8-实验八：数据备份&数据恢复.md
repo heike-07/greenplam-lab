@@ -2202,13 +2202,319 @@ Tables backed up:  10 / 10 [====================================================
 
 ###### 模拟故障
 
+模拟数据库删除故障，然后进行全量数据带增量标识的恢复，然后再基于增量进行恢复
+
+```powershell
+# 故障
+[gpadmin@Master-a ~]$ psql
+psql (9.4.24)
+Type "help" for help.
+
+gp_sydb=# SELECT pid, usename, application_name, client_addr, client_port, backend_start, state
+gp_sydb-# FROM pg_stat_activity
+gp_sydb-# WHERE datname = 'backup_test_database';
+  pid  | usename | application_name | client_addr  | client_port |         backend_start         | state 
+-------+---------+------------------+--------------+-------------+-------------------------------+-------
+ 84340 | gpadmin | Navicat          | 192.168.7.99 |       59490 | 2024-12-06 13:54:59.781674+08 | idle
+ 51191 | gpadmin | Navicat          | 192.168.7.99 |       59484 | 2024-12-06 13:40:10.927146+08 | idle
+ 88321 | gpadmin | Navicat          | 192.168.7.99 |       59492 | 2024-12-06 13:56:49.643506+08 | idle
+ 88323 | gpadmin | Navicat          | 192.168.7.99 |       59494 | 2024-12-06 13:56:50.086045+08 | idle
+ 51855 | gpadmin | Navicat          | 192.168.7.99 |       59486 | 2024-12-06 13:40:29.054763+08 | idle
+ 84229 | gpadmin | Navicat          | 192.168.7.99 |       59488 | 2024-12-06 13:54:58.953036+08 | idle
+(6 rows)
+
+gp_sydb=# SELECT pg_terminate_backend(pid)                                                     
+gp_sydb-# FROM pg_stat_activity
+gp_sydb-# WHERE datname = 'backup_test_database' AND pid <> pg_backend_pid();
+ pg_terminate_backend 
+----------------------
+ t
+ t
+ t
+ t
+ t
+ t
+(6 rows)
+
+gp_sydb=# SELECT pg_terminate_backend(pid)
+gp_sydb-# FROM pg_stat_activity
+gp_sydb-# WHERE datname = 'backup_test_database' AND pid <> pg_backend_pid();
+ pg_terminate_backend 
+----------------------
+(0 rows)
+
+gp_sydb=# DROP DATABASE backup_test_database;
+DROP DATABASE
+gp_sydb=# \l
+                                 List of databases
+     Name      |  Owner  | Encoding |  Collate   |   Ctype    |  Access privileges  
+---------------+---------+----------+------------+------------+---------------------
+ gp_sydb       | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | 
+ postgres      | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | 
+ template0     | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | =c/gpadmin         +
+               |         |          |            |            | gpadmin=CTc/gpadmin
+ template1     | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | =c/gpadmin         +
+               |         |          |            |            | gpadmin=CTc/gpadmin
+ test_database | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | 
+ test_db       | gpadmin | UTF8     | en_US.utf8 | en_US.utf8 | 
+(6 rows)
+
+gp_sydb=#
+```
+
+###### 全量数据恢复（具有增量标识的）
+
+```powershell
+# 获取时间戳 20241206134403
+[gpadmin@Master-a ~]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206134403 --verbose
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restore Command: [gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206134403 --verbose]
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[INFO]:-Restore Key = 20241206134403
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[INFO]:-gpbackup version = 1.30.7
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[INFO]:-gprestore version = 1.30.7
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Gathering information on backup directories
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Verifying backup directories exist
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Metadata will be restored from /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/gpbackup_20241206134403_metadata.sql
+20241206:14:37:30 gprestore:gpadmin:Master-a:035104-[INFO]:-Creating database
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[INFO]:-Database creation complete for: backup_test_database
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[INFO]:-Restoring pre-data metadata
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  10% (7/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  20% (14/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  30% (20/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  40% (27/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  50% (33/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  60% (40/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  70% (47/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  80% (53/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  90% (60/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Pre-data objects restored:  100% (66/66)
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[INFO]:-Pre-data metadata restore complete
+20241206:14:37:31 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Verifying backup file count
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restoring data for 10 tables from backup with timestamp: 20241206134403
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees2(id,name,age,gender,department,hire_date,birth_date,address) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74057.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees2 from file (table load 1 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees3(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74060.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees3 from file (table load 2 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees4(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74065.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees4 from file (table load 3 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees(id,name,age,department,hire_date) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74068.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees from file (table load 4 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees6(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74073.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees6 from file (table load 5 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees7(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74076.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees7 from file (table load 6 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees5(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74081.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees5 from file (table load 7 of 10)
+20241206:14:37:32 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.table_test(id,name,age,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74085.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:36 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.table_test from file (table load 8 of 10)
+20241206:14:37:36 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.table_data(id,name,age,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74091.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.table_data from file (table load 9 of 10)
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Executing "COPY public.employees_import(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206134403/gpbackup_<SEGID>_20241206134403_74097.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Restored data for table public.employees_import from file (table load 10 of 10)
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[INFO]:-Data restore complete
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[INFO]:-Restoring post-data metadata
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  10% (1/10)
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  20% (2/10)
+20241206:14:37:47 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  30% (3/10)
+20241206:14:37:48 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  40% (4/10)
+20241206:14:37:48 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  50% (5/10)
+20241206:14:37:48 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  60% (6/10)
+20241206:14:37:48 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  70% (7/10)
+20241206:14:37:48 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  80% (8/10)
+20241206:14:37:55 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  90% (9/10)
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[DEBUG]:-Post-data objects restored:  100% (10/10)
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Post-data metadata restore complete
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Email containing gprestore report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/gprestore_20241206134403_20241206143730_report will not be sent
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Beginning cleanup
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Cleanup complete
+20241206:14:37:56 gprestore:gpadmin:Master-a:035104-[INFO]:-Restore completed successfully
+[gpadmin@Master-a ~]$
+```
+
+查看数据
+
+![image-20241206143959706](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206143959706.png)
+
+可以看到数据是最原始的数据是一致的。
+
+###### 增量数据恢复（基于带有增量标识的全量备份）
+
+```powershell
+# 获取时间戳 20241206140221
+
+[gpadmin@Master-a 20241206140221]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose
+
+[gpadmin@Master-a 20241206140221]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[DEBUG]:-Restore Command: [gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose]
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Restore Key = 20241206140221
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-gpbackup version = 1.30.7
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-gprestore version = 1.30.7
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[DEBUG]:-Gathering information on backup directories
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[DEBUG]:-Verifying backup directories exist
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[DEBUG]:-Metadata will be restored from /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gpbackup_20241206140221_metadata.sql
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[CRITICAL]:-Database "backup_test_database" already exists. Run gprestore again without --create-db flag.
+github.com/greenplum-db/gpbackup/restore.ValidateDatabaseExistence
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/restore/validate.go:224
+github.com/greenplum-db/gpbackup/restore.DoSetup
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/restore/restore.go:116
+main.main.func1
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/gprestore.go:22
+github.com/spf13/cobra.(*Command).execute
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/vendor/github.com/spf13/cobra/command.go:920
+github.com/spf13/cobra.(*Command).ExecuteC
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/vendor/github.com/spf13/cobra/command.go:1044
+github.com/spf13/cobra.(*Command).Execute
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/vendor/github.com/spf13/cobra/command.go:968
+main.main
+        /tmp/build/16b62eb3/go/src/github.com/greenplum-db/gpbackup/gprestore.go:27
+runtime.main
+        /usr/local/go/src/runtime/proc.go:267
+runtime.goexit
+        /usr/local/go/src/runtime/asm_amd64.s:1650
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Email containing gprestore report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gprestore_20241206140221_20241206144458_report will not be sent
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Beginning cleanup
+20241206:14:44:58 gprestore:gpadmin:Master-a:051861-[INFO]:-Cleanup complete
+[gpadmin@Master-a 20241206140221]$
+
+[gpadmin@Master-a 20241206140221]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --timestamp 20241206140221 --verbose
+20241206:14:45:38 gprestore:gpadmin:Master-a:053461-[DEBUG]:-Restore Command: [gprestore --backup-dir /home/gpadmin/backups-incremental2/ --timestamp 20241206140221 --verbose]
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Restore Key = 20241206140221
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-gpbackup version = 1.30.7
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-gprestore version = 1.30.7
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[DEBUG]:-Gathering information on backup directories
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[DEBUG]:-Verifying backup directories exist
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[DEBUG]:-Metadata will be restored from /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gpbackup_20241206140221_metadata.sql
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[CRITICAL]:-Relation public.employees2 already exists
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Email containing gprestore report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gprestore_20241206140221_20241206144539_report will not be sent
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Beginning cleanup
+20241206:14:45:39 gprestore:gpadmin:Master-a:053461-[INFO]:-Cleanup complete
+[gpadmin@Master-a 20241206140221]$
+
+理级错误，所以全量的数据恢复是没有意义的，恢复增量的时间戳，全量就带回来了，是时间点 不是时间段。
 
 
+```
 
+### 再次模拟故障
 
+```powershell
+[gpadmin@Master-a 20241206140221]$ psql
+psql (9.4.24)
+Type "help" for help.
 
+gp_sydb=# DROP DATABASE backup_test_database;
+ERROR:  database "backup_test_database" is being accessed by other users
+DETAIL:  There are 4 other sessions using the database.
+gp_sydb=# SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'backup_test_database' AND pid <> pg_backend_pid();
+ pg_terminate_backend 
+----------------------
+ t
+ t
+ t
+ t
+(4 rows)
 
+gp_sydb=# DROP DATABASE backup_test_database;
+DROP DATABASE
+gp_sydb=# \q
+[gpadmin@Master-a 20241206140221]$
+```
 
+#### 增量数据恢复（时间戳）
+
+```powershell
+[gpadmin@Master-a 20241206140221]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restore Command: [gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose]
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[INFO]:-Restore Key = 20241206140221
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[INFO]:-gpbackup version = 1.30.7
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[INFO]:-gprestore version = 1.30.7
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Gathering information on backup directories
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Verifying backup directories exist
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Metadata will be restored from /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gpbackup_20241206140221_metadata.sql
+20241206:15:03:30 gprestore:gpadmin:Master-a:092877-[INFO]:-Creating database
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[INFO]:-Database creation complete for: backup_test_database
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[INFO]:-Restoring pre-data metadata
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  10% (6/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  20% (11/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  30% (17/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  40% (22/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  50% (27/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  60% (33/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  70% (38/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  80% (44/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  90% (49/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Pre-data objects restored:  100% (54/54)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[INFO]:-Pre-data metadata restore complete
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Verifying backup file count
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restoring data for 0 tables from backup with timestamp: 20241206134403
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-No data to restore for timestamp = 20241206134403
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restoring data for 10 tables from backup with timestamp: 20241206140221
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees2(id,name,age,gender,department,hire_date,birth_date,address) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74057.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees2 from file (table load 1 of 10)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees3(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74060.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees3 from file (table load 2 of 10)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees4(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74065.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees4 from file (table load 3 of 10)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees(id,name,age,department,hire_date) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74068.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees from file (table load 4 of 10)
+20241206:15:03:31 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees6(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74073.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:32 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees6 from file (table load 5 of 10)
+20241206:15:03:32 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees5(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74081.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:32 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees5 from file (table load 6 of 10)
+20241206:15:03:32 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.table_test(id,name,age,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74085.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:33 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.table_test from file (table load 7 of 10)
+20241206:15:03:33 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.table_data(id,name,age,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74091.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.table_data from file (table load 8 of 10)
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees_import(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74097.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees_import from file (table load 9 of 10)
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Executing "COPY public.employees6_copy1(id,name,age,gender,department,hire_date,birth_date,address,salary) FROM PROGRAM 'cat /home/gpadmin/backups-incremental2/gpseg<SEGID>/backups/20241206/20241206140221/gpbackup_<SEGID>_20241206140221_74129.gz | gzip -d -c' WITH CSV DELIMITER ',' ON SEGMENT;" on master
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Restored data for table public.employees6_copy1 from file (table load 10 of 10)
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[INFO]:-Data restore complete
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[INFO]:-Restoring post-data metadata
+20241206:15:03:43 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  10% (1/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  20% (2/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  30% (3/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  40% (4/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  50% (5/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  60% (6/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  70% (7/10)
+20241206:15:03:44 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  80% (8/10)
+20241206:15:03:51 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  90% (9/10)
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[DEBUG]:-Post-data objects restored:  100% (10/10)
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Post-data metadata restore complete
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Email containing gprestore report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gprestore_20241206140221_20241206150330_report will not be sent
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Beginning cleanup
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Cleanup complete
+20241206:15:03:52 gprestore:gpadmin:Master-a:092877-[INFO]:-Restore completed successfully
+[gpadmin@Master-a 20241206140221]$
+```
+
+数据查看
+
+![image-20241206150513664](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206150513664.png)
+
+可以看到恢复了 当前时间点的数据，由此引出增量备份的逻辑
+
+### 逻辑思考
+
+![Principle of Greenblum Incremental Backup](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/Principle of Greenblum Incremental Backup.png)
+
+**红色：**作为gpbackup进行全量备份，生成备份时间点 
+
+**黄色：**作为gpbackup进行增量备份，生成备份时间点
+
+**绿色：**作为gprestore进行增量恢复，会根据恢复的时间戳，找是否有关联时间戳，这里找到了关联时间戳4403，所以恢复的内容就是当前的时间点。
+
+**黑色：**作为gprestore进行增量恢复，会根据用户指定的恢复时间戳进行恢复，用户只要全量备份时的时间点的数据，作为恢复的内容也是可以实现的。
 
 
 
