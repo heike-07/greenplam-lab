@@ -2338,7 +2338,7 @@ gp_sydb=#
 
 可以看到数据是最原始的数据是一致的。
 
-###### 增量数据恢复（基于带有增量标识的全量备份）
+###### 增量数据恢复（基于带有增量标识的全量备份）- 不正确思路逻辑
 
 ```powershell
 # 获取时间戳 20241206140221
@@ -2396,11 +2396,9 @@ runtime.goexit
 [gpadmin@Master-a 20241206140221]$
 
 理级错误，所以全量的数据恢复是没有意义的，恢复增量的时间戳，全量就带回来了，是时间点 不是时间段。
-
-
 ```
 
-### 再次模拟故障
+###### 数据删除重新来过
 
 ```powershell
 [gpadmin@Master-a 20241206140221]$ psql
@@ -2427,7 +2425,7 @@ gp_sydb=# \q
 [gpadmin@Master-a 20241206140221]$
 ```
 
-#### 增量数据恢复（时间戳）
+###### 增量数据恢复（时间戳）
 
 ```powershell
 [gpadmin@Master-a 20241206140221]$ gprestore --backup-dir /home/gpadmin/backups-incremental2/ --create-db --timestamp 20241206140221 --verbose
@@ -2504,7 +2502,7 @@ gp_sydb=# \q
 
 可以看到恢复了 当前时间点的数据，由此引出增量备份的逻辑
 
-### 逻辑思考
+##### 逻辑思考
 
 ![Principle of Greenblum Incremental Backup](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/Principle of Greenblum Incremental Backup.png)
 
@@ -2516,7 +2514,9 @@ gp_sydb=# \q
 
 **黑色：**作为gprestore进行增量恢复，会根据用户指定的恢复时间戳进行恢复，用户只要全量备份时的时间点的数据，作为恢复的内容也是可以实现的。
 
+### 总结
 
+实验学习了数据库的备份和恢复，对全量备份和增量备份有了了解和具体的实验，同时也理清楚了增量备份的逻辑思考，对文件SQL层面的逻辑导出也有相应的学习，进行了相应的实验，故此对greenplum数据库的备份和恢复已经基本熟悉了。
 
-
+END
 
