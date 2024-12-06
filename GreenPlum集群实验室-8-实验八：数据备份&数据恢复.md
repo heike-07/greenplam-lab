@@ -1023,7 +1023,1682 @@ Tables backed up:  4 / 4 [======================================================
 
 全量备份备份时间长，在业务变动频繁的情况下就不是最有的选择了，因此我们可以进行增量备份
 
-增量备份参考文档：
+增量备份参考文档：https://techdocs.broadcom.com/us/en/vmware-tanzu/data-solutions/tanzu-greenplum-backup-and-restore/1-30/greenplum-backup-and-restore/admin_guide-managing-backup-gpbackup-incremental.html
+
+##### 全量数据备份
+
+备份前数据（因为backup这个库就是test_database的实验镜像)
+
+![image-20241206102246417](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206102246417.png)
+
+##### 模拟数据录入
+
+- A. 表新增x条数据
+- B. 表删除x条数据
+- C. 修改特定规则x条数据
+- D. 删除一个表
+- E. 新增一个表
+
+###### 新增数据
+
+数据执行前有0条数据
+
+![image-20241206111108797](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111108797.png)
+
+通过语句随机写入50条数据
+
+![image-20241206111305968](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111305968.png)
+
+再次查看
+
+![image-20241206111438042](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111438042.png)
+
+![image-20241206111509333](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111509333.png)
+
+###### 删除数据
+
+数据查看
+
+![image-20241206105136719](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105136719.png)
+
+![image-20241206105300537](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105300537.png)
+
+删除数据
+
+![image-20241206105352154](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105352154.png)
+
+![image-20241206105405010](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105405010.png)
+
+###### 修改数据
+
+数据查看
+
+![image-20241206105509339](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105509339.png)
+
+数据修改
+
+![image-20241206105846599](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105846599.png)
+
+数据修改后查看
+
+![image-20241206105917118](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206105917118.png)
+
+###### 删除表
+
+![image-20241206111639980](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111639980.png)
+
+###### 新增表
+
+这里直接复制一个表吧
+
+![image-20241206111724919](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206111724919.png)
+
+数据汇总一下
+
+因为有排它锁更新一下相关统计SQL
+
+```sql
+/* 创建临时表 */
+CREATE TEMP TABLE table_counts (
+    schema_name TEXT,
+    table_name TEXT,
+    row_count BIGINT
+);
+
+DO $$ 
+DECLARE
+    tbl RECORD; 
+BEGIN 
+    FOR tbl IN 
+        SELECT 
+            n.nspname AS schema_name, 
+            c.relname AS table_name 
+        FROM 
+            pg_class c 
+        JOIN 
+            pg_namespace n ON n.oid = c.relnamespace 
+        WHERE 
+            c.relkind = 'r' 
+            AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'gp_toolkit') 
+            AND n.nspname NOT LIKE 'pg_temp%'  -- 排除所有临时命名空间
+    LOOP 
+        EXECUTE format(
+            'INSERT INTO table_counts (schema_name, table_name, row_count) 
+             SELECT %L, %L, count(*) FROM %I.%I',
+            tbl.schema_name, 
+            tbl.table_name, 
+            tbl.schema_name, 
+            tbl.table_name
+        );
+    END LOOP; 
+END $$;
+
+/* 查询临时表结果 */
+SELECT * FROM table_counts ORDER BY row_count DESC;
+```
+
+再看下统计结果
+
+![image-20241206113225439](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206113225439.png)
+
+这个数据结果作为增量同步是否成功的判定标准，即为先进行全量的恢复，再进行增量的恢复，有个尴尬的点，由于test_database并没有做全量数据备份，而 backup_test_database做了全量数据备份，那就修改一下思路，test_database作为对照组，除了自动生成的50条数据外其他其他数据一致，50条仅记录条数。
+
+以上的内容需要在backup_test_database再做一遍，故此过程忽略。
+
+![image-20241206114635313](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206114635313.png)
+
+##### 增量备份
+
+![image-20241206115620837](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206115620837.png)
+
+基于上一个全量备份的时间戳进行增量备份，就是上面模拟数据录入的修改部分
+
+查看备份报告
+
+![image-20241206115747046](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206115747046.png)
+
+查看Sengment备份数据
+
+```powershell
+[gpadmin@Master-a ~]$ for host in Master-a Standby-a Segment-a Segment-b Segment-c Segment-d; do
+>   echo "===== $host ====="
+>   ssh gpadmin@$host "tree /home/gpadmin/backups"
+> done
+===== Master-a =====
+/home/gpadmin/backups
+└── gpseg-1
+    └── backups
+        ├── 20241205
+        │   └── 20241205142822
+        │       ├── gpbackup_20241205142822_config.yaml
+        │       ├── gpbackup_20241205142822_metadata.sql
+        │       ├── gpbackup_20241205142822_report
+        │       └── gpbackup_20241205142822_toc.yaml
+        └── 20241206
+            ├── 20241206102913
+            │   ├── gpbackup_20241206102913_config.yaml
+            │   ├── gpbackup_20241206102913_metadata.sql
+            │   ├── gpbackup_20241206102913_report
+            │   └── gpbackup_20241206102913_toc.yaml
+            └── 20241206115607
+                ├── gpbackup_20241206115607_config.yaml
+                └── gpbackup_20241206115607_report
+
+7 directories, 10 files
+===== Standby-a =====
+/home/gpadmin/backups [error opening dir]
+
+0 directories, 0 files
+===== Segment-a =====
+/home/gpadmin/backups
+├── gpseg0
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_0_20241205142822_57370.gz
+│       │       ├── gpbackup_0_20241205142822_65584.gz
+│       │       ├── gpbackup_0_20241205142822_65593.gz
+│       │       └── gpbackup_0_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_0_20241206102913_73900.gz
+│           │   ├── gpbackup_0_20241206102913_73904.gz
+│           │   ├── gpbackup_0_20241206102913_73908.gz
+│           │   ├── gpbackup_0_20241206102913_73912.gz
+│           │   ├── gpbackup_0_20241206102913_73916.gz
+│           │   ├── gpbackup_0_20241206102913_73920.gz
+│           │   ├── gpbackup_0_20241206102913_73924.gz
+│           │   ├── gpbackup_0_20241206102913_73928.gz
+│           │   ├── gpbackup_0_20241206102913_73932.gz
+│           │   └── gpbackup_0_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg1
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_1_20241205142822_57370.gz
+│       │       ├── gpbackup_1_20241205142822_65584.gz
+│       │       ├── gpbackup_1_20241205142822_65593.gz
+│       │       └── gpbackup_1_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_1_20241206102913_73900.gz
+│           │   ├── gpbackup_1_20241206102913_73904.gz
+│           │   ├── gpbackup_1_20241206102913_73908.gz
+│           │   ├── gpbackup_1_20241206102913_73912.gz
+│           │   ├── gpbackup_1_20241206102913_73916.gz
+│           │   ├── gpbackup_1_20241206102913_73920.gz
+│           │   ├── gpbackup_1_20241206102913_73924.gz
+│           │   ├── gpbackup_1_20241206102913_73928.gz
+│           │   ├── gpbackup_1_20241206102913_73932.gz
+│           │   └── gpbackup_1_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg16
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_16_20241205142822_57370.gz
+│       │       ├── gpbackup_16_20241205142822_65584.gz
+│       │       ├── gpbackup_16_20241205142822_65593.gz
+│       │       └── gpbackup_16_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_16_20241206102913_73900.gz
+│           │   ├── gpbackup_16_20241206102913_73904.gz
+│           │   ├── gpbackup_16_20241206102913_73908.gz
+│           │   ├── gpbackup_16_20241206102913_73912.gz
+│           │   ├── gpbackup_16_20241206102913_73916.gz
+│           │   ├── gpbackup_16_20241206102913_73920.gz
+│           │   ├── gpbackup_16_20241206102913_73924.gz
+│           │   ├── gpbackup_16_20241206102913_73928.gz
+│           │   ├── gpbackup_16_20241206102913_73932.gz
+│           │   └── gpbackup_16_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg4
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_4_20241205142822_57370.gz
+│       │       ├── gpbackup_4_20241205142822_65584.gz
+│       │       ├── gpbackup_4_20241205142822_65593.gz
+│       │       └── gpbackup_4_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_4_20241206102913_73900.gz
+│           │   ├── gpbackup_4_20241206102913_73904.gz
+│           │   ├── gpbackup_4_20241206102913_73908.gz
+│           │   ├── gpbackup_4_20241206102913_73912.gz
+│           │   ├── gpbackup_4_20241206102913_73916.gz
+│           │   ├── gpbackup_4_20241206102913_73920.gz
+│           │   ├── gpbackup_4_20241206102913_73924.gz
+│           │   ├── gpbackup_4_20241206102913_73928.gz
+│           │   ├── gpbackup_4_20241206102913_73932.gz
+│           │   └── gpbackup_4_20241206102913_73938.gz
+│           └── 20241206115607
+└── gpseg5
+    └── backups
+        ├── 20241205
+        │   └── 20241205142822
+        │       ├── gpbackup_5_20241205142822_57370.gz
+        │       ├── gpbackup_5_20241205142822_65584.gz
+        │       ├── gpbackup_5_20241205142822_65593.gz
+        │       └── gpbackup_5_20241205142822_73785.gz
+        └── 20241206
+            ├── 20241206102913
+            │   ├── gpbackup_5_20241206102913_73900.gz
+            │   ├── gpbackup_5_20241206102913_73904.gz
+            │   ├── gpbackup_5_20241206102913_73908.gz
+            │   ├── gpbackup_5_20241206102913_73912.gz
+            │   ├── gpbackup_5_20241206102913_73916.gz
+            │   ├── gpbackup_5_20241206102913_73920.gz
+            │   ├── gpbackup_5_20241206102913_73924.gz
+            │   ├── gpbackup_5_20241206102913_73928.gz
+            │   ├── gpbackup_5_20241206102913_73932.gz
+            │   └── gpbackup_5_20241206102913_73938.gz
+            └── 20241206115607
+
+35 directories, 70 files
+===== Segment-b =====
+/home/gpadmin/backups
+├── gpseg17
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_17_20241205142822_57370.gz
+│       │       ├── gpbackup_17_20241205142822_65584.gz
+│       │       ├── gpbackup_17_20241205142822_65593.gz
+│       │       └── gpbackup_17_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_17_20241206102913_73900.gz
+│           │   ├── gpbackup_17_20241206102913_73904.gz
+│           │   ├── gpbackup_17_20241206102913_73908.gz
+│           │   ├── gpbackup_17_20241206102913_73912.gz
+│           │   ├── gpbackup_17_20241206102913_73916.gz
+│           │   ├── gpbackup_17_20241206102913_73920.gz
+│           │   ├── gpbackup_17_20241206102913_73924.gz
+│           │   ├── gpbackup_17_20241206102913_73928.gz
+│           │   ├── gpbackup_17_20241206102913_73932.gz
+│           │   └── gpbackup_17_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg2
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_2_20241205142822_57370.gz
+│       │       ├── gpbackup_2_20241205142822_65584.gz
+│       │       ├── gpbackup_2_20241205142822_65593.gz
+│       │       └── gpbackup_2_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_2_20241206102913_73900.gz
+│           │   ├── gpbackup_2_20241206102913_73904.gz
+│           │   ├── gpbackup_2_20241206102913_73908.gz
+│           │   ├── gpbackup_2_20241206102913_73912.gz
+│           │   ├── gpbackup_2_20241206102913_73916.gz
+│           │   ├── gpbackup_2_20241206102913_73920.gz
+│           │   ├── gpbackup_2_20241206102913_73924.gz
+│           │   ├── gpbackup_2_20241206102913_73928.gz
+│           │   ├── gpbackup_2_20241206102913_73932.gz
+│           │   └── gpbackup_2_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg3
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_3_20241205142822_57370.gz
+│       │       ├── gpbackup_3_20241205142822_65584.gz
+│       │       ├── gpbackup_3_20241205142822_65593.gz
+│       │       └── gpbackup_3_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_3_20241206102913_73900.gz
+│           │   ├── gpbackup_3_20241206102913_73904.gz
+│           │   ├── gpbackup_3_20241206102913_73908.gz
+│           │   ├── gpbackup_3_20241206102913_73912.gz
+│           │   ├── gpbackup_3_20241206102913_73916.gz
+│           │   ├── gpbackup_3_20241206102913_73920.gz
+│           │   ├── gpbackup_3_20241206102913_73924.gz
+│           │   ├── gpbackup_3_20241206102913_73928.gz
+│           │   ├── gpbackup_3_20241206102913_73932.gz
+│           │   └── gpbackup_3_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg6
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_6_20241205142822_57370.gz
+│       │       ├── gpbackup_6_20241205142822_65584.gz
+│       │       ├── gpbackup_6_20241205142822_65593.gz
+│       │       └── gpbackup_6_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_6_20241206102913_73900.gz
+│           │   ├── gpbackup_6_20241206102913_73904.gz
+│           │   ├── gpbackup_6_20241206102913_73908.gz
+│           │   ├── gpbackup_6_20241206102913_73912.gz
+│           │   ├── gpbackup_6_20241206102913_73916.gz
+│           │   ├── gpbackup_6_20241206102913_73920.gz
+│           │   ├── gpbackup_6_20241206102913_73924.gz
+│           │   ├── gpbackup_6_20241206102913_73928.gz
+│           │   ├── gpbackup_6_20241206102913_73932.gz
+│           │   └── gpbackup_6_20241206102913_73938.gz
+│           └── 20241206115607
+└── gpseg7
+    └── backups
+        ├── 20241205
+        │   └── 20241205142822
+        │       ├── gpbackup_7_20241205142822_57370.gz
+        │       ├── gpbackup_7_20241205142822_65584.gz
+        │       ├── gpbackup_7_20241205142822_65593.gz
+        │       └── gpbackup_7_20241205142822_73785.gz
+        └── 20241206
+            ├── 20241206102913
+            │   ├── gpbackup_7_20241206102913_73900.gz
+            │   ├── gpbackup_7_20241206102913_73904.gz
+            │   ├── gpbackup_7_20241206102913_73908.gz
+            │   ├── gpbackup_7_20241206102913_73912.gz
+            │   ├── gpbackup_7_20241206102913_73916.gz
+            │   ├── gpbackup_7_20241206102913_73920.gz
+            │   ├── gpbackup_7_20241206102913_73924.gz
+            │   ├── gpbackup_7_20241206102913_73928.gz
+            │   ├── gpbackup_7_20241206102913_73932.gz
+            │   └── gpbackup_7_20241206102913_73938.gz
+            └── 20241206115607
+
+35 directories, 70 files
+===== Segment-c =====
+/home/gpadmin/backups
+├── gpseg10
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_10_20241205142822_57370.gz
+│       │       ├── gpbackup_10_20241205142822_65584.gz
+│       │       ├── gpbackup_10_20241205142822_65593.gz
+│       │       └── gpbackup_10_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_10_20241206102913_73900.gz
+│           │   ├── gpbackup_10_20241206102913_73904.gz
+│           │   ├── gpbackup_10_20241206102913_73908.gz
+│           │   ├── gpbackup_10_20241206102913_73912.gz
+│           │   ├── gpbackup_10_20241206102913_73916.gz
+│           │   ├── gpbackup_10_20241206102913_73920.gz
+│           │   ├── gpbackup_10_20241206102913_73924.gz
+│           │   ├── gpbackup_10_20241206102913_73928.gz
+│           │   ├── gpbackup_10_20241206102913_73932.gz
+│           │   └── gpbackup_10_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg11
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_11_20241205142822_57370.gz
+│       │       ├── gpbackup_11_20241205142822_65584.gz
+│       │       ├── gpbackup_11_20241205142822_65593.gz
+│       │       └── gpbackup_11_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_11_20241206102913_73900.gz
+│           │   ├── gpbackup_11_20241206102913_73904.gz
+│           │   ├── gpbackup_11_20241206102913_73908.gz
+│           │   ├── gpbackup_11_20241206102913_73912.gz
+│           │   ├── gpbackup_11_20241206102913_73916.gz
+│           │   ├── gpbackup_11_20241206102913_73920.gz
+│           │   ├── gpbackup_11_20241206102913_73924.gz
+│           │   ├── gpbackup_11_20241206102913_73928.gz
+│           │   ├── gpbackup_11_20241206102913_73932.gz
+│           │   └── gpbackup_11_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg18
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_18_20241205142822_57370.gz
+│       │       ├── gpbackup_18_20241205142822_65584.gz
+│       │       ├── gpbackup_18_20241205142822_65593.gz
+│       │       └── gpbackup_18_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_18_20241206102913_73900.gz
+│           │   ├── gpbackup_18_20241206102913_73904.gz
+│           │   ├── gpbackup_18_20241206102913_73908.gz
+│           │   ├── gpbackup_18_20241206102913_73912.gz
+│           │   ├── gpbackup_18_20241206102913_73916.gz
+│           │   ├── gpbackup_18_20241206102913_73920.gz
+│           │   ├── gpbackup_18_20241206102913_73924.gz
+│           │   ├── gpbackup_18_20241206102913_73928.gz
+│           │   ├── gpbackup_18_20241206102913_73932.gz
+│           │   └── gpbackup_18_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg8
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_8_20241205142822_57370.gz
+│       │       ├── gpbackup_8_20241205142822_65584.gz
+│       │       ├── gpbackup_8_20241205142822_65593.gz
+│       │       └── gpbackup_8_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_8_20241206102913_73900.gz
+│           │   ├── gpbackup_8_20241206102913_73904.gz
+│           │   ├── gpbackup_8_20241206102913_73908.gz
+│           │   ├── gpbackup_8_20241206102913_73912.gz
+│           │   ├── gpbackup_8_20241206102913_73916.gz
+│           │   ├── gpbackup_8_20241206102913_73920.gz
+│           │   ├── gpbackup_8_20241206102913_73924.gz
+│           │   ├── gpbackup_8_20241206102913_73928.gz
+│           │   ├── gpbackup_8_20241206102913_73932.gz
+│           │   └── gpbackup_8_20241206102913_73938.gz
+│           └── 20241206115607
+└── gpseg9
+    └── backups
+        ├── 20241205
+        │   └── 20241205142822
+        │       ├── gpbackup_9_20241205142822_57370.gz
+        │       ├── gpbackup_9_20241205142822_65584.gz
+        │       ├── gpbackup_9_20241205142822_65593.gz
+        │       └── gpbackup_9_20241205142822_73785.gz
+        └── 20241206
+            ├── 20241206102913
+            │   ├── gpbackup_9_20241206102913_73900.gz
+            │   ├── gpbackup_9_20241206102913_73904.gz
+            │   ├── gpbackup_9_20241206102913_73908.gz
+            │   ├── gpbackup_9_20241206102913_73912.gz
+            │   ├── gpbackup_9_20241206102913_73916.gz
+            │   ├── gpbackup_9_20241206102913_73920.gz
+            │   ├── gpbackup_9_20241206102913_73924.gz
+            │   ├── gpbackup_9_20241206102913_73928.gz
+            │   ├── gpbackup_9_20241206102913_73932.gz
+            │   └── gpbackup_9_20241206102913_73938.gz
+            └── 20241206115607
+
+35 directories, 70 files
+===== Segment-d =====
+/home/gpadmin/backups
+├── gpseg12
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_12_20241205142822_57370.gz
+│       │       ├── gpbackup_12_20241205142822_65584.gz
+│       │       ├── gpbackup_12_20241205142822_65593.gz
+│       │       └── gpbackup_12_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_12_20241206102913_73900.gz
+│           │   ├── gpbackup_12_20241206102913_73904.gz
+│           │   ├── gpbackup_12_20241206102913_73908.gz
+│           │   ├── gpbackup_12_20241206102913_73912.gz
+│           │   ├── gpbackup_12_20241206102913_73916.gz
+│           │   ├── gpbackup_12_20241206102913_73920.gz
+│           │   ├── gpbackup_12_20241206102913_73924.gz
+│           │   ├── gpbackup_12_20241206102913_73928.gz
+│           │   ├── gpbackup_12_20241206102913_73932.gz
+│           │   └── gpbackup_12_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg13
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_13_20241205142822_57370.gz
+│       │       ├── gpbackup_13_20241205142822_65584.gz
+│       │       ├── gpbackup_13_20241205142822_65593.gz
+│       │       └── gpbackup_13_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_13_20241206102913_73900.gz
+│           │   ├── gpbackup_13_20241206102913_73904.gz
+│           │   ├── gpbackup_13_20241206102913_73908.gz
+│           │   ├── gpbackup_13_20241206102913_73912.gz
+│           │   ├── gpbackup_13_20241206102913_73916.gz
+│           │   ├── gpbackup_13_20241206102913_73920.gz
+│           │   ├── gpbackup_13_20241206102913_73924.gz
+│           │   ├── gpbackup_13_20241206102913_73928.gz
+│           │   ├── gpbackup_13_20241206102913_73932.gz
+│           │   └── gpbackup_13_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg14
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_14_20241205142822_57370.gz
+│       │       ├── gpbackup_14_20241205142822_65584.gz
+│       │       ├── gpbackup_14_20241205142822_65593.gz
+│       │       └── gpbackup_14_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_14_20241206102913_73900.gz
+│           │   ├── gpbackup_14_20241206102913_73904.gz
+│           │   ├── gpbackup_14_20241206102913_73908.gz
+│           │   ├── gpbackup_14_20241206102913_73912.gz
+│           │   ├── gpbackup_14_20241206102913_73916.gz
+│           │   ├── gpbackup_14_20241206102913_73920.gz
+│           │   ├── gpbackup_14_20241206102913_73924.gz
+│           │   ├── gpbackup_14_20241206102913_73928.gz
+│           │   ├── gpbackup_14_20241206102913_73932.gz
+│           │   └── gpbackup_14_20241206102913_73938.gz
+│           └── 20241206115607
+├── gpseg15
+│   └── backups
+│       ├── 20241205
+│       │   └── 20241205142822
+│       │       ├── gpbackup_15_20241205142822_57370.gz
+│       │       ├── gpbackup_15_20241205142822_65584.gz
+│       │       ├── gpbackup_15_20241205142822_65593.gz
+│       │       └── gpbackup_15_20241205142822_73785.gz
+│       └── 20241206
+│           ├── 20241206102913
+│           │   ├── gpbackup_15_20241206102913_73900.gz
+│           │   ├── gpbackup_15_20241206102913_73904.gz
+│           │   ├── gpbackup_15_20241206102913_73908.gz
+│           │   ├── gpbackup_15_20241206102913_73912.gz
+│           │   ├── gpbackup_15_20241206102913_73916.gz
+│           │   ├── gpbackup_15_20241206102913_73920.gz
+│           │   ├── gpbackup_15_20241206102913_73924.gz
+│           │   ├── gpbackup_15_20241206102913_73928.gz
+│           │   ├── gpbackup_15_20241206102913_73932.gz
+│           │   └── gpbackup_15_20241206102913_73938.gz
+│           └── 20241206115607
+└── gpseg19
+    └── backups
+        ├── 20241205
+        │   └── 20241205142822
+        │       ├── gpbackup_19_20241205142822_57370.gz
+        │       ├── gpbackup_19_20241205142822_65584.gz
+        │       ├── gpbackup_19_20241205142822_65593.gz
+        │       └── gpbackup_19_20241205142822_73785.gz
+        └── 20241206
+            ├── 20241206102913
+            │   ├── gpbackup_19_20241206102913_73900.gz
+            │   ├── gpbackup_19_20241206102913_73904.gz
+            │   ├── gpbackup_19_20241206102913_73908.gz
+            │   ├── gpbackup_19_20241206102913_73912.gz
+            │   ├── gpbackup_19_20241206102913_73916.gz
+            │   ├── gpbackup_19_20241206102913_73920.gz
+            │   ├── gpbackup_19_20241206102913_73924.gz
+            │   ├── gpbackup_19_20241206102913_73928.gz
+            │   ├── gpbackup_19_20241206102913_73932.gz
+            │   └── gpbackup_19_20241206102913_73938.gz
+            └── 20241206115607
+
+35 directories, 70 files
+[gpadmin@Master-a ~]$
+```
+
+![image-20241206131459384](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206131459384.png)
+
+报错提示无法生效
+
+那就重新处理下，把backup这数据库重新删除恢复一下，然后做全量备份，再通过增量做备份。
+
+```powershell
+[gpadmin@Master-a 20241206131336]$ psql
+psql (9.4.24)
+Type "help" for help.
+
+gp_sydb=# SELECT pid, usename, application_name, client_addr, client_port, backend_start, state
+FROM pg_stat_activity
+WHERE datname = 'backup_test_database';
+  pid  | usename | application_name | client_addr  | client_port |         backend_start         | state 
+-------+---------+------------------+--------------+-------------+-------------------------------+-------
+ 35098 | gpadmin | Navicat          | 192.168.7.99 |       59474 | 2024-12-06 11:42:12.055003+08 | idle
+ 35140 | gpadmin | Navicat          | 192.168.7.99 |       59476 | 2024-12-06 11:43:00.365024+08 | idle
+ 35159 | gpadmin | Navicat          | 192.168.7.99 |       59478 | 2024-12-06 11:43:21.590585+08 | idle
+ 35161 | gpadmin | Navicat          | 192.168.7.99 |       59480 | 2024-12-06 11:43:22.285872+08 | idle
+(4 rows)
+
+gp_sydb=# DROP DATABASE backup_test_database;
+ERROR:  database "backup_test_database" is being accessed by other users
+DETAIL:  There are 4 other sessions using the database.
+gp_sydb=# 
+gp_sydb=# SELECT pg_terminate_backend(pid)                                                     
+FROM pg_stat_activity
+WHERE datname = 'backup_test_database' AND pid <> pg_backend_pid();
+ pg_terminate_backend 
+----------------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+gp_sydb=# DROP DATABASE backup_test_database;
+DROP DATABASE
+gp_sydb=# SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'backup_test_database' AND pid <> pg_backend_pid();
+ pg_terminate_backend 
+----------------------
+(0 rows)
+
+gp_sydb=#
+
+
+# 恢复今天备份的内容
+[gpadmin@Master-a 20241206131336]$ gprestore --backup-dir /home/gpadmin/backups/ --timestamp 20241206102913 --create-db --jobs 4
+20241206:13:36:04 gprestore:gpadmin:Master-a:042776-[INFO]:-Restore Key = 20241206102913
+20241206:13:36:04 gprestore:gpadmin:Master-a:042776-[INFO]:-gpbackup version = 1.30.7
+20241206:13:36:04 gprestore:gpadmin:Master-a:042776-[INFO]:-gprestore version = 1.30.7
+20241206:13:36:04 gprestore:gpadmin:Master-a:042776-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:13:36:04 gprestore:gpadmin:Master-a:042776-[INFO]:-Creating database
+20241206:13:36:05 gprestore:gpadmin:Master-a:042776-[INFO]:-Database creation complete for: backup_test_database
+20241206:13:36:05 gprestore:gpadmin:Master-a:042776-[INFO]:-Restoring pre-data metadata
+Pre-data objects restored:  66 / 66 [===================================================] 100.00% 0s
+20241206:13:36:05 gprestore:gpadmin:Master-a:042776-[INFO]:-Pre-data metadata restore complete
+Table data loads restored:  10 / 10 [==================================================] 100.00% 13s
+20241206:13:36:19 gprestore:gpadmin:Master-a:042776-[INFO]:-Data restore complete
+20241206:13:36:19 gprestore:gpadmin:Master-a:042776-[INFO]:-Restoring post-data metadata
+Post-data objects restored:  10 / 10 [==================================================] 100.00% 8s
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Post-data metadata restore complete
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Email containing gprestore report /home/gpadmin/backups/gpseg-1/backups/20241206/20241206102913/gprestore_20241206102913_20241206133604_report will not be sent
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Beginning cleanup
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Cleanup complete
+20241206:13:36:28 gprestore:gpadmin:Master-a:042776-[INFO]:-Restore completed successfully
+[gpadmin@Master-a 20241206131336]$
+
+# 进行完整备份
+
+[gpadmin@Master-a ~]$ gpbackup --dbname backup_test_database --backup-dir /home/gpadmin/backups-incremental2/ --leaf-partition-data
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-gpbackup version = 1.30.7
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Starting backup of database backup_test_database
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Backup Timestamp = 20241206134403
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Backup Database = backup_test_database
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Gathering table state information
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Acquiring ACCESS SHARE locks on tables
+Locks acquired:  10 / 10 [==============================================================] 100.00% 0s
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Gathering additional table metadata
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Getting partition definitions
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Getting storage information
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Getting child partitions with altered schema
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Metadata will be written to /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/gpbackup_20241206134403_metadata.sql
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Writing global database metadata
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Global database metadata backup complete
+20241206:13:44:03 gpbackup:gpadmin:Master-a:060041-[INFO]:-Writing pre-data metadata
+20241206:13:44:04 gpbackup:gpadmin:Master-a:060041-[INFO]:-Pre-data metadata metadata backup complete
+20241206:13:44:04 gpbackup:gpadmin:Master-a:060041-[INFO]:-Writing post-data metadata
+20241206:13:44:04 gpbackup:gpadmin:Master-a:060041-[INFO]:-Post-data metadata backup complete
+20241206:13:44:04 gpbackup:gpadmin:Master-a:060041-[INFO]:-Writing data to file
+Tables backed up:  10 / 10 [============================================================] 100.00% 8s
+20241206:13:44:12 gpbackup:gpadmin:Master-a:060041-[INFO]:-Data backup complete
+20241206:13:44:13 gpbackup:gpadmin:Master-a:060041-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:13:44:13 gpbackup:gpadmin:Master-a:060041-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/gpbackup_20241206134403_report will not be sent
+20241206:13:44:13 gpbackup:gpadmin:Master-a:060041-[INFO]:-Beginning cleanup
+20241206:13:44:13 gpbackup:gpadmin:Master-a:060041-[INFO]:-Cleanup complete
+20241206:13:44:13 gpbackup:gpadmin:Master-a:060041-[INFO]:-Backup completed successfully
+[gpadmin@Master-a ~]$ cat /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/
+cat: /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/: Is a directory
+[gpadmin@Master-a ~]$ cat /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206134403/gpbackup_20241206134403_report 
+Greenplum Database Backup Report
+
+timestamp key:         20241206134403
+gpdb version:          6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+gpbackup version:      1.30.7
+
+database name:         backup_test_database
+command line:          gpbackup --dbname backup_test_database --backup-dir /home/gpadmin/backups-incremental2/ --leaf-partition-data
+compression:           gzip
+plugin executable:     None
+backup section:        All Sections
+object filtering:      None
+includes statistics:   No
+data file format:      Multiple Data Files Per Segment
+incremental:           False
+
+start time:            Fri Dec 06 2024 13:44:03
+end time:              Fri Dec 06 2024 13:44:13
+duration:              0:00:10
+
+backup status:         Success
+
+database size:         4702 MB
+segment count:         20
+
+count of database objects in backup:
+aggregates                   0
+casts                        0
+collations                   0
+constraints                  10
+conversions                  0
+default privileges           0
+database gucs                0
+event triggers               0
+extensions                   0
+foreign data wrappers        0
+foreign servers              0
+functions                    0
+indexes                      0
+operator classes             0
+operator families            0
+operators                    0
+procedural languages         0
+protocols                    0
+resource groups              2
+resource queues              1
+roles                        1
+rules                        0
+schemas                      1
+sequences                    8
+tables                       10
+tablespaces                  0
+text search configurations   0
+text search dictionaries     0
+text search parsers          0
+text search templates        0
+triggers                     0
+types                        0
+user mappings                0
+views                        0
+[gpadmin@Master-a ~]$
+
+# 查看数据
+
+[gpadmin@Master-a ~]$ for host in Master-a Standby-a Segment-a Segment-b Segment-c Segment-d; do   echo "===== $host =====";   ssh gpadmin@$host "tree /home/gpadmin/backups-incremental2/"; done
+===== Master-a =====
+/home/gpadmin/backups-incremental2/
+└── gpseg-1
+    └── backups
+        └── 20241206
+            └── 20241206134403
+                ├── gpbackup_20241206134403_config.yaml
+                ├── gpbackup_20241206134403_metadata.sql
+                ├── gpbackup_20241206134403_report
+                └── gpbackup_20241206134403_toc.yaml
+
+4 directories, 4 files
+===== Standby-a =====
+/home/gpadmin/backups-incremental2/ [error opening dir]
+
+0 directories, 0 files
+===== Segment-a =====
+/home/gpadmin/backups-incremental2/
+├── gpseg0
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_0_20241206134403_74057.gz
+│               ├── gpbackup_0_20241206134403_74060.gz
+│               ├── gpbackup_0_20241206134403_74065.gz
+│               ├── gpbackup_0_20241206134403_74068.gz
+│               ├── gpbackup_0_20241206134403_74073.gz
+│               ├── gpbackup_0_20241206134403_74076.gz
+│               ├── gpbackup_0_20241206134403_74081.gz
+│               ├── gpbackup_0_20241206134403_74085.gz
+│               ├── gpbackup_0_20241206134403_74091.gz
+│               └── gpbackup_0_20241206134403_74097.gz
+├── gpseg1
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_1_20241206134403_74057.gz
+│               ├── gpbackup_1_20241206134403_74060.gz
+│               ├── gpbackup_1_20241206134403_74065.gz
+│               ├── gpbackup_1_20241206134403_74068.gz
+│               ├── gpbackup_1_20241206134403_74073.gz
+│               ├── gpbackup_1_20241206134403_74076.gz
+│               ├── gpbackup_1_20241206134403_74081.gz
+│               ├── gpbackup_1_20241206134403_74085.gz
+│               ├── gpbackup_1_20241206134403_74091.gz
+│               └── gpbackup_1_20241206134403_74097.gz
+├── gpseg16
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_16_20241206134403_74057.gz
+│               ├── gpbackup_16_20241206134403_74060.gz
+│               ├── gpbackup_16_20241206134403_74065.gz
+│               ├── gpbackup_16_20241206134403_74068.gz
+│               ├── gpbackup_16_20241206134403_74073.gz
+│               ├── gpbackup_16_20241206134403_74076.gz
+│               ├── gpbackup_16_20241206134403_74081.gz
+│               ├── gpbackup_16_20241206134403_74085.gz
+│               ├── gpbackup_16_20241206134403_74091.gz
+│               └── gpbackup_16_20241206134403_74097.gz
+├── gpseg4
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_4_20241206134403_74057.gz
+│               ├── gpbackup_4_20241206134403_74060.gz
+│               ├── gpbackup_4_20241206134403_74065.gz
+│               ├── gpbackup_4_20241206134403_74068.gz
+│               ├── gpbackup_4_20241206134403_74073.gz
+│               ├── gpbackup_4_20241206134403_74076.gz
+│               ├── gpbackup_4_20241206134403_74081.gz
+│               ├── gpbackup_4_20241206134403_74085.gz
+│               ├── gpbackup_4_20241206134403_74091.gz
+│               └── gpbackup_4_20241206134403_74097.gz
+└── gpseg5
+    └── backups
+        └── 20241206
+            └── 20241206134403
+                ├── gpbackup_5_20241206134403_74057.gz
+                ├── gpbackup_5_20241206134403_74060.gz
+                ├── gpbackup_5_20241206134403_74065.gz
+                ├── gpbackup_5_20241206134403_74068.gz
+                ├── gpbackup_5_20241206134403_74073.gz
+                ├── gpbackup_5_20241206134403_74076.gz
+                ├── gpbackup_5_20241206134403_74081.gz
+                ├── gpbackup_5_20241206134403_74085.gz
+                ├── gpbackup_5_20241206134403_74091.gz
+                └── gpbackup_5_20241206134403_74097.gz
+
+20 directories, 50 files
+===== Segment-b =====
+/home/gpadmin/backups-incremental2/
+├── gpseg17
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_17_20241206134403_74057.gz
+│               ├── gpbackup_17_20241206134403_74060.gz
+│               ├── gpbackup_17_20241206134403_74065.gz
+│               ├── gpbackup_17_20241206134403_74068.gz
+│               ├── gpbackup_17_20241206134403_74073.gz
+│               ├── gpbackup_17_20241206134403_74076.gz
+│               ├── gpbackup_17_20241206134403_74081.gz
+│               ├── gpbackup_17_20241206134403_74085.gz
+│               ├── gpbackup_17_20241206134403_74091.gz
+│               └── gpbackup_17_20241206134403_74097.gz
+├── gpseg2
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_2_20241206134403_74057.gz
+│               ├── gpbackup_2_20241206134403_74060.gz
+│               ├── gpbackup_2_20241206134403_74065.gz
+│               ├── gpbackup_2_20241206134403_74068.gz
+│               ├── gpbackup_2_20241206134403_74073.gz
+│               ├── gpbackup_2_20241206134403_74076.gz
+│               ├── gpbackup_2_20241206134403_74081.gz
+│               ├── gpbackup_2_20241206134403_74085.gz
+│               ├── gpbackup_2_20241206134403_74091.gz
+│               └── gpbackup_2_20241206134403_74097.gz
+├── gpseg3
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_3_20241206134403_74057.gz
+│               ├── gpbackup_3_20241206134403_74060.gz
+│               ├── gpbackup_3_20241206134403_74065.gz
+│               ├── gpbackup_3_20241206134403_74068.gz
+│               ├── gpbackup_3_20241206134403_74073.gz
+│               ├── gpbackup_3_20241206134403_74076.gz
+│               ├── gpbackup_3_20241206134403_74081.gz
+│               ├── gpbackup_3_20241206134403_74085.gz
+│               ├── gpbackup_3_20241206134403_74091.gz
+│               └── gpbackup_3_20241206134403_74097.gz
+├── gpseg6
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_6_20241206134403_74057.gz
+│               ├── gpbackup_6_20241206134403_74060.gz
+│               ├── gpbackup_6_20241206134403_74065.gz
+│               ├── gpbackup_6_20241206134403_74068.gz
+│               ├── gpbackup_6_20241206134403_74073.gz
+│               ├── gpbackup_6_20241206134403_74076.gz
+│               ├── gpbackup_6_20241206134403_74081.gz
+│               ├── gpbackup_6_20241206134403_74085.gz
+│               ├── gpbackup_6_20241206134403_74091.gz
+│               └── gpbackup_6_20241206134403_74097.gz
+└── gpseg7
+    └── backups
+        └── 20241206
+            └── 20241206134403
+                ├── gpbackup_7_20241206134403_74057.gz
+                ├── gpbackup_7_20241206134403_74060.gz
+                ├── gpbackup_7_20241206134403_74065.gz
+                ├── gpbackup_7_20241206134403_74068.gz
+                ├── gpbackup_7_20241206134403_74073.gz
+                ├── gpbackup_7_20241206134403_74076.gz
+                ├── gpbackup_7_20241206134403_74081.gz
+                ├── gpbackup_7_20241206134403_74085.gz
+                ├── gpbackup_7_20241206134403_74091.gz
+                └── gpbackup_7_20241206134403_74097.gz
+
+20 directories, 50 files
+===== Segment-c =====
+/home/gpadmin/backups-incremental2/
+├── gpseg10
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_10_20241206134403_74057.gz
+│               ├── gpbackup_10_20241206134403_74060.gz
+│               ├── gpbackup_10_20241206134403_74065.gz
+│               ├── gpbackup_10_20241206134403_74068.gz
+│               ├── gpbackup_10_20241206134403_74073.gz
+│               ├── gpbackup_10_20241206134403_74076.gz
+│               ├── gpbackup_10_20241206134403_74081.gz
+│               ├── gpbackup_10_20241206134403_74085.gz
+│               ├── gpbackup_10_20241206134403_74091.gz
+│               └── gpbackup_10_20241206134403_74097.gz
+├── gpseg11
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_11_20241206134403_74057.gz
+│               ├── gpbackup_11_20241206134403_74060.gz
+│               ├── gpbackup_11_20241206134403_74065.gz
+│               ├── gpbackup_11_20241206134403_74068.gz
+│               ├── gpbackup_11_20241206134403_74073.gz
+│               ├── gpbackup_11_20241206134403_74076.gz
+│               ├── gpbackup_11_20241206134403_74081.gz
+│               ├── gpbackup_11_20241206134403_74085.gz
+│               ├── gpbackup_11_20241206134403_74091.gz
+│               └── gpbackup_11_20241206134403_74097.gz
+├── gpseg18
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_18_20241206134403_74057.gz
+│               ├── gpbackup_18_20241206134403_74060.gz
+│               ├── gpbackup_18_20241206134403_74065.gz
+│               ├── gpbackup_18_20241206134403_74068.gz
+│               ├── gpbackup_18_20241206134403_74073.gz
+│               ├── gpbackup_18_20241206134403_74076.gz
+│               ├── gpbackup_18_20241206134403_74081.gz
+│               ├── gpbackup_18_20241206134403_74085.gz
+│               ├── gpbackup_18_20241206134403_74091.gz
+│               └── gpbackup_18_20241206134403_74097.gz
+├── gpseg8
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_8_20241206134403_74057.gz
+│               ├── gpbackup_8_20241206134403_74060.gz
+│               ├── gpbackup_8_20241206134403_74065.gz
+│               ├── gpbackup_8_20241206134403_74068.gz
+│               ├── gpbackup_8_20241206134403_74073.gz
+│               ├── gpbackup_8_20241206134403_74076.gz
+│               ├── gpbackup_8_20241206134403_74081.gz
+│               ├── gpbackup_8_20241206134403_74085.gz
+│               ├── gpbackup_8_20241206134403_74091.gz
+│               └── gpbackup_8_20241206134403_74097.gz
+└── gpseg9
+    └── backups
+        └── 20241206
+            └── 20241206134403
+                ├── gpbackup_9_20241206134403_74057.gz
+                ├── gpbackup_9_20241206134403_74060.gz
+                ├── gpbackup_9_20241206134403_74065.gz
+                ├── gpbackup_9_20241206134403_74068.gz
+                ├── gpbackup_9_20241206134403_74073.gz
+                ├── gpbackup_9_20241206134403_74076.gz
+                ├── gpbackup_9_20241206134403_74081.gz
+                ├── gpbackup_9_20241206134403_74085.gz
+                ├── gpbackup_9_20241206134403_74091.gz
+                └── gpbackup_9_20241206134403_74097.gz
+
+20 directories, 50 files
+===== Segment-d =====
+/home/gpadmin/backups-incremental2/
+├── gpseg12
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_12_20241206134403_74057.gz
+│               ├── gpbackup_12_20241206134403_74060.gz
+│               ├── gpbackup_12_20241206134403_74065.gz
+│               ├── gpbackup_12_20241206134403_74068.gz
+│               ├── gpbackup_12_20241206134403_74073.gz
+│               ├── gpbackup_12_20241206134403_74076.gz
+│               ├── gpbackup_12_20241206134403_74081.gz
+│               ├── gpbackup_12_20241206134403_74085.gz
+│               ├── gpbackup_12_20241206134403_74091.gz
+│               └── gpbackup_12_20241206134403_74097.gz
+├── gpseg13
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_13_20241206134403_74057.gz
+│               ├── gpbackup_13_20241206134403_74060.gz
+│               ├── gpbackup_13_20241206134403_74065.gz
+│               ├── gpbackup_13_20241206134403_74068.gz
+│               ├── gpbackup_13_20241206134403_74073.gz
+│               ├── gpbackup_13_20241206134403_74076.gz
+│               ├── gpbackup_13_20241206134403_74081.gz
+│               ├── gpbackup_13_20241206134403_74085.gz
+│               ├── gpbackup_13_20241206134403_74091.gz
+│               └── gpbackup_13_20241206134403_74097.gz
+├── gpseg14
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_14_20241206134403_74057.gz
+│               ├── gpbackup_14_20241206134403_74060.gz
+│               ├── gpbackup_14_20241206134403_74065.gz
+│               ├── gpbackup_14_20241206134403_74068.gz
+│               ├── gpbackup_14_20241206134403_74073.gz
+│               ├── gpbackup_14_20241206134403_74076.gz
+│               ├── gpbackup_14_20241206134403_74081.gz
+│               ├── gpbackup_14_20241206134403_74085.gz
+│               ├── gpbackup_14_20241206134403_74091.gz
+│               └── gpbackup_14_20241206134403_74097.gz
+├── gpseg15
+│   └── backups
+│       └── 20241206
+│           └── 20241206134403
+│               ├── gpbackup_15_20241206134403_74057.gz
+│               ├── gpbackup_15_20241206134403_74060.gz
+│               ├── gpbackup_15_20241206134403_74065.gz
+│               ├── gpbackup_15_20241206134403_74068.gz
+│               ├── gpbackup_15_20241206134403_74073.gz
+│               ├── gpbackup_15_20241206134403_74076.gz
+│               ├── gpbackup_15_20241206134403_74081.gz
+│               ├── gpbackup_15_20241206134403_74085.gz
+│               ├── gpbackup_15_20241206134403_74091.gz
+│               └── gpbackup_15_20241206134403_74097.gz
+└── gpseg19
+    └── backups
+        └── 20241206
+            └── 20241206134403
+                ├── gpbackup_19_20241206134403_74057.gz
+                ├── gpbackup_19_20241206134403_74060.gz
+                ├── gpbackup_19_20241206134403_74065.gz
+                ├── gpbackup_19_20241206134403_74068.gz
+                ├── gpbackup_19_20241206134403_74073.gz
+                ├── gpbackup_19_20241206134403_74076.gz
+                ├── gpbackup_19_20241206134403_74081.gz
+                ├── gpbackup_19_20241206134403_74085.gz
+                ├── gpbackup_19_20241206134403_74091.gz
+                └── gpbackup_19_20241206134403_74097.gz
+
+20 directories, 50 files
+[gpadmin@Master-a ~]$
+
+# 做模拟数据录入
+```
+
+![image-20241206135814452](GreenPlum集群实验室-8-实验八：数据备份&数据恢复.assets/image-20241206135814452.png)
+
+现在进行增量备份、
+
+```powershell
+# 基于刚刚创建的完整性备份进行增量备份
+
+[gpadmin@Master-a ~]$ gpbackup --dbname backup_test_database --backup-dir /home/gpadmin/backups-incremental2/ --leaf-partition-data --incremental --from-timestamp 20241206134403
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-gpbackup version = 1.30.7
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-Starting backup of database backup_test_database
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-Backup Timestamp = 20241206140221
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-Backup Database = backup_test_database
+20241206:14:02:21 gpbackup:gpadmin:Master-a:100593-[INFO]:-Gathering table state information
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Acquiring ACCESS SHARE locks on tables
+Locks acquired:  10 / 10 [==============================================================] 100.00% 0s
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Gathering additional table metadata
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Getting partition definitions
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Getting storage information
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Getting child partitions with altered schema
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Metadata will be written to /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gpbackup_20241206140221_metadata.sql
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Basing incremental backup off of backup with timestamp = 20241206134403
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Writing global database metadata
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Global database metadata backup complete
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Writing pre-data metadata
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Pre-data metadata metadata backup complete
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Writing post-data metadata
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Post-data metadata backup complete
+20241206:14:02:22 gpbackup:gpadmin:Master-a:100593-[INFO]:-Writing data to file
+Tables backed up:  10 / 10 [============================================================] 100.00% 8s
+20241206:14:02:30 gpbackup:gpadmin:Master-a:100593-[INFO]:-Data backup complete
+20241206:14:02:31 gpbackup:gpadmin:Master-a:100593-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
+20241206:14:02:31 gpbackup:gpadmin:Master-a:100593-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-incremental2/gpseg-1/backups/20241206/20241206140221/gpbackup_20241206140221_report will not be sent
+20241206:14:02:31 gpbackup:gpadmin:Master-a:100593-[INFO]:-Beginning cleanup
+20241206:14:02:31 gpbackup:gpadmin:Master-a:100593-[INFO]:-Cleanup complete
+20241206:14:02:31 gpbackup:gpadmin:Master-a:100593-[INFO]:-Backup completed successfully
+[gpadmin@Master-a ~]$
+
+# 查看增量备份数据
+
+[gpadmin@Master-a ~]$ for host in Master-a Standby-a Segment-a Segment-b Segment-c Segment-d; do   echo "===== $host =====";   ssh gpadmin@$host "tree /home/gpadmin/backups-incremental2/"; done
+===== Master-a =====
+/home/gpadmin/backups-incremental2/
+└── gpseg-1
+    └── backups
+        └── 20241206
+            ├── 20241206134403
+            │   ├── gpbackup_20241206134403_config.yaml
+            │   ├── gpbackup_20241206134403_metadata.sql
+            │   ├── gpbackup_20241206134403_report
+            │   └── gpbackup_20241206134403_toc.yaml
+            └── 20241206140221
+                ├── gpbackup_20241206140221_config.yaml
+                ├── gpbackup_20241206140221_metadata.sql
+                ├── gpbackup_20241206140221_report
+                └── gpbackup_20241206140221_toc.yaml
+
+5 directories, 8 files
+===== Standby-a =====
+/home/gpadmin/backups-incremental2/ [error opening dir]
+
+0 directories, 0 files
+===== Segment-a =====
+/home/gpadmin/backups-incremental2/
+├── gpseg0
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_0_20241206134403_74057.gz
+│           │   ├── gpbackup_0_20241206134403_74060.gz
+│           │   ├── gpbackup_0_20241206134403_74065.gz
+│           │   ├── gpbackup_0_20241206134403_74068.gz
+│           │   ├── gpbackup_0_20241206134403_74073.gz
+│           │   ├── gpbackup_0_20241206134403_74076.gz
+│           │   ├── gpbackup_0_20241206134403_74081.gz
+│           │   ├── gpbackup_0_20241206134403_74085.gz
+│           │   ├── gpbackup_0_20241206134403_74091.gz
+│           │   └── gpbackup_0_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_0_20241206140221_74057.gz
+│               ├── gpbackup_0_20241206140221_74060.gz
+│               ├── gpbackup_0_20241206140221_74065.gz
+│               ├── gpbackup_0_20241206140221_74068.gz
+│               ├── gpbackup_0_20241206140221_74073.gz
+│               ├── gpbackup_0_20241206140221_74081.gz
+│               ├── gpbackup_0_20241206140221_74085.gz
+│               ├── gpbackup_0_20241206140221_74091.gz
+│               ├── gpbackup_0_20241206140221_74097.gz
+│               └── gpbackup_0_20241206140221_74129.gz
+├── gpseg1
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_1_20241206134403_74057.gz
+│           │   ├── gpbackup_1_20241206134403_74060.gz
+│           │   ├── gpbackup_1_20241206134403_74065.gz
+│           │   ├── gpbackup_1_20241206134403_74068.gz
+│           │   ├── gpbackup_1_20241206134403_74073.gz
+│           │   ├── gpbackup_1_20241206134403_74076.gz
+│           │   ├── gpbackup_1_20241206134403_74081.gz
+│           │   ├── gpbackup_1_20241206134403_74085.gz
+│           │   ├── gpbackup_1_20241206134403_74091.gz
+│           │   └── gpbackup_1_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_1_20241206140221_74057.gz
+│               ├── gpbackup_1_20241206140221_74060.gz
+│               ├── gpbackup_1_20241206140221_74065.gz
+│               ├── gpbackup_1_20241206140221_74068.gz
+│               ├── gpbackup_1_20241206140221_74073.gz
+│               ├── gpbackup_1_20241206140221_74081.gz
+│               ├── gpbackup_1_20241206140221_74085.gz
+│               ├── gpbackup_1_20241206140221_74091.gz
+│               ├── gpbackup_1_20241206140221_74097.gz
+│               └── gpbackup_1_20241206140221_74129.gz
+├── gpseg16
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_16_20241206134403_74057.gz
+│           │   ├── gpbackup_16_20241206134403_74060.gz
+│           │   ├── gpbackup_16_20241206134403_74065.gz
+│           │   ├── gpbackup_16_20241206134403_74068.gz
+│           │   ├── gpbackup_16_20241206134403_74073.gz
+│           │   ├── gpbackup_16_20241206134403_74076.gz
+│           │   ├── gpbackup_16_20241206134403_74081.gz
+│           │   ├── gpbackup_16_20241206134403_74085.gz
+│           │   ├── gpbackup_16_20241206134403_74091.gz
+│           │   └── gpbackup_16_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_16_20241206140221_74057.gz
+│               ├── gpbackup_16_20241206140221_74060.gz
+│               ├── gpbackup_16_20241206140221_74065.gz
+│               ├── gpbackup_16_20241206140221_74068.gz
+│               ├── gpbackup_16_20241206140221_74073.gz
+│               ├── gpbackup_16_20241206140221_74081.gz
+│               ├── gpbackup_16_20241206140221_74085.gz
+│               ├── gpbackup_16_20241206140221_74091.gz
+│               ├── gpbackup_16_20241206140221_74097.gz
+│               └── gpbackup_16_20241206140221_74129.gz
+├── gpseg4
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_4_20241206134403_74057.gz
+│           │   ├── gpbackup_4_20241206134403_74060.gz
+│           │   ├── gpbackup_4_20241206134403_74065.gz
+│           │   ├── gpbackup_4_20241206134403_74068.gz
+│           │   ├── gpbackup_4_20241206134403_74073.gz
+│           │   ├── gpbackup_4_20241206134403_74076.gz
+│           │   ├── gpbackup_4_20241206134403_74081.gz
+│           │   ├── gpbackup_4_20241206134403_74085.gz
+│           │   ├── gpbackup_4_20241206134403_74091.gz
+│           │   └── gpbackup_4_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_4_20241206140221_74057.gz
+│               ├── gpbackup_4_20241206140221_74060.gz
+│               ├── gpbackup_4_20241206140221_74065.gz
+│               ├── gpbackup_4_20241206140221_74068.gz
+│               ├── gpbackup_4_20241206140221_74073.gz
+│               ├── gpbackup_4_20241206140221_74081.gz
+│               ├── gpbackup_4_20241206140221_74085.gz
+│               ├── gpbackup_4_20241206140221_74091.gz
+│               ├── gpbackup_4_20241206140221_74097.gz
+│               └── gpbackup_4_20241206140221_74129.gz
+└── gpseg5
+    └── backups
+        └── 20241206
+            ├── 20241206134403
+            │   ├── gpbackup_5_20241206134403_74057.gz
+            │   ├── gpbackup_5_20241206134403_74060.gz
+            │   ├── gpbackup_5_20241206134403_74065.gz
+            │   ├── gpbackup_5_20241206134403_74068.gz
+            │   ├── gpbackup_5_20241206134403_74073.gz
+            │   ├── gpbackup_5_20241206134403_74076.gz
+            │   ├── gpbackup_5_20241206134403_74081.gz
+            │   ├── gpbackup_5_20241206134403_74085.gz
+            │   ├── gpbackup_5_20241206134403_74091.gz
+            │   └── gpbackup_5_20241206134403_74097.gz
+            └── 20241206140221
+                ├── gpbackup_5_20241206140221_74057.gz
+                ├── gpbackup_5_20241206140221_74060.gz
+                ├── gpbackup_5_20241206140221_74065.gz
+                ├── gpbackup_5_20241206140221_74068.gz
+                ├── gpbackup_5_20241206140221_74073.gz
+                ├── gpbackup_5_20241206140221_74081.gz
+                ├── gpbackup_5_20241206140221_74085.gz
+                ├── gpbackup_5_20241206140221_74091.gz
+                ├── gpbackup_5_20241206140221_74097.gz
+                └── gpbackup_5_20241206140221_74129.gz
+
+25 directories, 100 files
+===== Segment-b =====
+/home/gpadmin/backups-incremental2/
+├── gpseg17
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_17_20241206134403_74057.gz
+│           │   ├── gpbackup_17_20241206134403_74060.gz
+│           │   ├── gpbackup_17_20241206134403_74065.gz
+│           │   ├── gpbackup_17_20241206134403_74068.gz
+│           │   ├── gpbackup_17_20241206134403_74073.gz
+│           │   ├── gpbackup_17_20241206134403_74076.gz
+│           │   ├── gpbackup_17_20241206134403_74081.gz
+│           │   ├── gpbackup_17_20241206134403_74085.gz
+│           │   ├── gpbackup_17_20241206134403_74091.gz
+│           │   └── gpbackup_17_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_17_20241206140221_74057.gz
+│               ├── gpbackup_17_20241206140221_74060.gz
+│               ├── gpbackup_17_20241206140221_74065.gz
+│               ├── gpbackup_17_20241206140221_74068.gz
+│               ├── gpbackup_17_20241206140221_74073.gz
+│               ├── gpbackup_17_20241206140221_74081.gz
+│               ├── gpbackup_17_20241206140221_74085.gz
+│               ├── gpbackup_17_20241206140221_74091.gz
+│               ├── gpbackup_17_20241206140221_74097.gz
+│               └── gpbackup_17_20241206140221_74129.gz
+├── gpseg2
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_2_20241206134403_74057.gz
+│           │   ├── gpbackup_2_20241206134403_74060.gz
+│           │   ├── gpbackup_2_20241206134403_74065.gz
+│           │   ├── gpbackup_2_20241206134403_74068.gz
+│           │   ├── gpbackup_2_20241206134403_74073.gz
+│           │   ├── gpbackup_2_20241206134403_74076.gz
+│           │   ├── gpbackup_2_20241206134403_74081.gz
+│           │   ├── gpbackup_2_20241206134403_74085.gz
+│           │   ├── gpbackup_2_20241206134403_74091.gz
+│           │   └── gpbackup_2_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_2_20241206140221_74057.gz
+│               ├── gpbackup_2_20241206140221_74060.gz
+│               ├── gpbackup_2_20241206140221_74065.gz
+│               ├── gpbackup_2_20241206140221_74068.gz
+│               ├── gpbackup_2_20241206140221_74073.gz
+│               ├── gpbackup_2_20241206140221_74081.gz
+│               ├── gpbackup_2_20241206140221_74085.gz
+│               ├── gpbackup_2_20241206140221_74091.gz
+│               ├── gpbackup_2_20241206140221_74097.gz
+│               └── gpbackup_2_20241206140221_74129.gz
+├── gpseg3
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_3_20241206134403_74057.gz
+│           │   ├── gpbackup_3_20241206134403_74060.gz
+│           │   ├── gpbackup_3_20241206134403_74065.gz
+│           │   ├── gpbackup_3_20241206134403_74068.gz
+│           │   ├── gpbackup_3_20241206134403_74073.gz
+│           │   ├── gpbackup_3_20241206134403_74076.gz
+│           │   ├── gpbackup_3_20241206134403_74081.gz
+│           │   ├── gpbackup_3_20241206134403_74085.gz
+│           │   ├── gpbackup_3_20241206134403_74091.gz
+│           │   └── gpbackup_3_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_3_20241206140221_74057.gz
+│               ├── gpbackup_3_20241206140221_74060.gz
+��               ├── gpbackup_3_20241206140221_74065.gz
+│               ├── gpbackup_3_20241206140221_74068.gz
+│               ├── gpbackup_3_20241206140221_74073.gz
+│               ├── gpbackup_3_20241206140221_74081.gz
+│               ├── gpbackup_3_20241206140221_74085.gz
+│               ├── gpbackup_3_20241206140221_74091.gz
+│               ├── gpbackup_3_20241206140221_74097.gz
+│               └── gpbackup_3_20241206140221_74129.gz
+├── gpseg6
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_6_20241206134403_74057.gz
+│           │   ├── gpbackup_6_20241206134403_74060.gz
+│           │   ├── gpbackup_6_20241206134403_74065.gz
+│           │   ├── gpbackup_6_20241206134403_74068.gz
+│           │   ├── gpbackup_6_20241206134403_74073.gz
+│           │   ├── gpbackup_6_20241206134403_74076.gz
+│           │   ├── gpbackup_6_20241206134403_74081.gz
+│           │   ├── gpbackup_6_20241206134403_74085.gz
+│           │   ├── gpbackup_6_20241206134403_74091.gz
+│           │   └── gpbackup_6_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_6_20241206140221_74057.gz
+│               ├── gpbackup_6_20241206140221_74060.gz
+│               ├── gpbackup_6_20241206140221_74065.gz
+│               ├── gpbackup_6_20241206140221_74068.gz
+│               ├── gpbackup_6_20241206140221_74073.gz
+│               ├── gpbackup_6_20241206140221_74081.gz
+│               ├── gpbackup_6_20241206140221_74085.gz
+│               ├── gpbackup_6_20241206140221_74091.gz
+│               ├── gpbackup_6_20241206140221_74097.gz
+│               └── gpbackup_6_20241206140221_74129.gz
+└── gpseg7
+    └── backups
+        └── 20241206
+            ├── 20241206134403
+            │   ├── gpbackup_7_20241206134403_74057.gz
+            │   ├── gpbackup_7_20241206134403_74060.gz
+            │   ├── gpbackup_7_20241206134403_74065.gz
+            │   ├── gpbackup_7_20241206134403_74068.gz
+            │   ├── gpbackup_7_20241206134403_74073.gz
+            │   ├── gpbackup_7_20241206134403_74076.gz
+            │   ├── gpbackup_7_20241206134403_74081.gz
+            │   ├── gpbackup_7_20241206134403_74085.gz
+            │   ├── gpbackup_7_20241206134403_74091.gz
+            │   └── gpbackup_7_20241206134403_74097.gz
+            └── 20241206140221
+                ├── gpbackup_7_20241206140221_74057.gz
+                ├── gpbackup_7_20241206140221_74060.gz
+                ├── gpbackup_7_20241206140221_74065.gz
+                ├── gpbackup_7_20241206140221_74068.gz
+                ├── gpbackup_7_20241206140221_74073.gz
+                ├── gpbackup_7_20241206140221_74081.gz
+                ├── gpbackup_7_20241206140221_74085.gz
+                ├── gpbackup_7_20241206140221_74091.gz
+                ├── gpbackup_7_20241206140221_74097.gz
+                └── gpbackup_7_20241206140221_74129.gz
+
+25 directories, 100 files
+===== Segment-c =====
+/home/gpadmin/backups-incremental2/
+├── gpseg10
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_10_20241206134403_74057.gz
+│           │   ├── gpbackup_10_20241206134403_74060.gz
+│           │   ├── gpbackup_10_20241206134403_74065.gz
+│           │   ├── gpbackup_10_20241206134403_74068.gz
+│           │   ├── gpbackup_10_20241206134403_74073.gz
+│           │   ├── gpbackup_10_20241206134403_74076.gz
+│           │   ├── gpbackup_10_20241206134403_74081.gz
+│           │   ├── gpbackup_10_20241206134403_74085.gz
+│           │   ├── gpbackup_10_20241206134403_74091.gz
+│           │   └── gpbackup_10_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_10_20241206140221_74057.gz
+│               ├── gpbackup_10_20241206140221_74060.gz
+│               ├── gpbackup_10_20241206140221_74065.gz
+│               ├── gpbackup_10_20241206140221_74068.gz
+│               ├── gpbackup_10_20241206140221_74073.gz
+│               ├── gpbackup_10_20241206140221_74081.gz
+│               ├── gpbackup_10_20241206140221_74085.gz
+│               ├── gpbackup_10_20241206140221_74091.gz
+│               ├── gpbackup_10_20241206140221_74097.gz
+│               └── gpbackup_10_20241206140221_74129.gz
+├── gpseg11
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_11_20241206134403_74057.gz
+│           │   ├── gpbackup_11_20241206134403_74060.gz
+│           │   ├── gpbackup_11_20241206134403_74065.gz
+│           │   ├── gpbackup_11_20241206134403_74068.gz
+│           │   ├── gpbackup_11_20241206134403_74073.gz
+│           │   ├── gpbackup_11_20241206134403_74076.gz
+│           │   ├── gpbackup_11_20241206134403_74081.gz
+│           │   ├── gpbackup_11_20241206134403_74085.gz
+│           │   ├── gpbackup_11_20241206134403_74091.gz
+│           │   └── gpbackup_11_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_11_20241206140221_74057.gz
+│               ├── gpbackup_11_20241206140221_74060.gz
+│               ├── gpbackup_11_20241206140221_74065.gz
+│               ├── gpbackup_11_20241206140221_74068.gz
+│               ├── gpbackup_11_20241206140221_74073.gz
+│               ├── gpbackup_11_20241206140221_74081.gz
+│               ├── gpbackup_11_20241206140221_74085.gz
+│               ├── gpbackup_11_20241206140221_74091.gz
+│               ├── gpbackup_11_20241206140221_74097.gz
+│               └── gpbackup_11_20241206140221_74129.gz
+├── gpseg18
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_18_20241206134403_74057.gz
+│           │   ├── gpbackup_18_20241206134403_74060.gz
+│           │   ├── gpbackup_18_20241206134403_74065.gz
+│           │   ├── gpbackup_18_20241206134403_74068.gz
+│           │   ├── gpbackup_18_20241206134403_74073.gz
+│           │   ├── gpbackup_18_20241206134403_74076.gz
+│           │   ├── gpbackup_18_20241206134403_74081.gz
+│           │   ├── gpbackup_18_20241206134403_74085.gz
+│           │   ├── gpbackup_18_20241206134403_74091.gz
+│           │   └── gpbackup_18_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_18_20241206140221_74057.gz
+│               ├── gpbackup_18_20241206140221_74060.gz
+│               ├── gpbackup_18_20241206140221_74065.gz
+│               ├── gpbackup_18_20241206140221_74068.gz
+│               ├── gpbackup_18_20241206140221_74073.gz
+│               ├── gpbackup_18_20241206140221_74081.gz
+│               ├── gpbackup_18_20241206140221_74085.gz
+│               ├── gpbackup_18_20241206140221_74091.gz
+│               ├── gpbackup_18_20241206140221_74097.gz
+│               └── gpbackup_18_20241206140221_74129.gz
+├── gpseg8
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_8_20241206134403_74057.gz
+│           │   ├── gpbackup_8_20241206134403_74060.gz
+│           │   ├── gpbackup_8_20241206134403_74065.gz
+│           │   ├── gpbackup_8_20241206134403_74068.gz
+│           │   ├── gpbackup_8_20241206134403_74073.gz
+│           │   ├── gpbackup_8_20241206134403_74076.gz
+│           │   ├── gpbackup_8_20241206134403_74081.gz
+│           │   ├── gpbackup_8_20241206134403_74085.gz
+│           │   ├── gpbackup_8_20241206134403_74091.gz
+│           │   └── gpbackup_8_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_8_20241206140221_74057.gz
+│               ├── gpbackup_8_20241206140221_74060.gz
+│               ├── gpbackup_8_20241206140221_74065.gz
+│               ├── gpbackup_8_20241206140221_74068.gz
+│               ├── gpbackup_8_20241206140221_74073.gz
+│               ├── gpbackup_8_20241206140221_74081.gz
+│               ├── gpbackup_8_20241206140221_74085.gz
+│               ├── gpbackup_8_20241206140221_74091.gz
+│               ├── gpbackup_8_20241206140221_74097.gz
+│               └── gpbackup_8_20241206140221_74129.gz
+└── gpseg9
+    └── backups
+        └── 20241206
+            ├── 20241206134403
+            │   ├── gpbackup_9_20241206134403_74057.gz
+            │   ├── gpbackup_9_20241206134403_74060.gz
+            │   ├── gpbackup_9_20241206134403_74065.gz
+            │   ├── gpbackup_9_20241206134403_74068.gz
+            │   ├── gpbackup_9_20241206134403_74073.gz
+            │   ├── gpbackup_9_20241206134403_74076.gz
+            │   ├── gpbackup_9_20241206134403_74081.gz
+            │   ├── gpbackup_9_20241206134403_74085.gz
+            │   ├── gpbackup_9_20241206134403_74091.gz
+            │   └── gpbackup_9_20241206134403_74097.gz
+            └── 20241206140221
+                ├── gpbackup_9_20241206140221_74057.gz
+                ├── gpbackup_9_20241206140221_74060.gz
+                ├── gpbackup_9_20241206140221_74065.gz
+                ├── gpbackup_9_20241206140221_74068.gz
+                ├── gpbackup_9_20241206140221_74073.gz
+                ├── gpbackup_9_20241206140221_74081.gz
+                ├── gpbackup_9_20241206140221_74085.gz
+                ├── gpbackup_9_20241206140221_74091.gz
+                ├── gpbackup_9_20241206140221_74097.gz
+                └── gpbackup_9_20241206140221_74129.gz
+
+25 directories, 100 files
+===== Segment-d =====
+/home/gpadmin/backups-incremental2/
+├── gpseg12
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_12_20241206134403_74057.gz
+│           │   ├── gpbackup_12_20241206134403_74060.gz
+│           │   ├── gpbackup_12_20241206134403_74065.gz
+│           │   ├── gpbackup_12_20241206134403_74068.gz
+│           │   ├── gpbackup_12_20241206134403_74073.gz
+│           │   ├── gpbackup_12_20241206134403_74076.gz
+│           │   ├── gpbackup_12_20241206134403_74081.gz
+│           │   ├── gpbackup_12_20241206134403_74085.gz
+│           │   ├── gpbackup_12_20241206134403_74091.gz
+│           │   └── gpbackup_12_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_12_20241206140221_74057.gz
+│               ├── gpbackup_12_20241206140221_74060.gz
+│               ├── gpbackup_12_20241206140221_74065.gz
+│               ├── gpbackup_12_20241206140221_74068.gz
+│               ├── gpbackup_12_20241206140221_74073.gz
+│               ├── gpbackup_12_20241206140221_74081.gz
+│               ├── gpbackup_12_20241206140221_74085.gz
+│               ├── gpbackup_12_20241206140221_74091.gz
+│               ├── gpbackup_12_20241206140221_74097.gz
+│               └── gpbackup_12_20241206140221_74129.gz
+├── gpseg13
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_13_20241206134403_74057.gz
+│           │   ├── gpbackup_13_20241206134403_74060.gz
+│           │   ├── gpbackup_13_20241206134403_74065.gz
+│           │   ├── gpbackup_13_20241206134403_74068.gz
+│           │   ├── gpbackup_13_20241206134403_74073.gz
+│           │   ├── gpbackup_13_20241206134403_74076.gz
+│           │   ├── gpbackup_13_20241206134403_74081.gz
+│           │   ├── gpbackup_13_20241206134403_74085.gz
+│           │   ├── gpbackup_13_20241206134403_74091.gz
+│           │   └── gpbackup_13_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_13_20241206140221_74057.gz
+│               ├── gpbackup_13_20241206140221_74060.gz
+│               ├── gpbackup_13_20241206140221_74065.gz
+│               ├── gpbackup_13_20241206140221_74068.gz
+│               ├── gpbackup_13_20241206140221_74073.gz
+│               ├── gpbackup_13_20241206140221_74081.gz
+│               ├── gpbackup_13_20241206140221_74085.gz
+│               ├── gpbackup_13_20241206140221_74091.gz
+│               ├── gpbackup_13_20241206140221_74097.gz
+│               └── gpbackup_13_20241206140221_74129.gz
+├── gpseg14
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_14_20241206134403_74057.gz
+│           │   ├── gpbackup_14_20241206134403_74060.gz
+│           │   ├── gpbackup_14_20241206134403_74065.gz
+│           │   ├── gpbackup_14_20241206134403_74068.gz
+│           │   ├── gpbackup_14_20241206134403_74073.gz
+│           │   ├── gpbackup_14_20241206134403_74076.gz
+│           │   ├── gpbackup_14_20241206134403_74081.gz
+│           │   ├── gpbackup_14_20241206134403_74085.gz
+│           │   ├── gpbackup_14_20241206134403_74091.gz
+│           │   └── gpbackup_14_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_14_20241206140221_74057.gz
+│               ├── gpbackup_14_20241206140221_74060.gz
+│               ├── gpbackup_14_20241206140221_74065.gz
+│               ├── gpbackup_14_20241206140221_74068.gz
+│               ├── gpbackup_14_20241206140221_74073.gz
+│               ├── gpbackup_14_20241206140221_74081.gz
+│               ├── gpbackup_14_20241206140221_74085.gz
+│               ├── gpbackup_14_20241206140221_74091.gz
+│               ├── gpbackup_14_20241206140221_74097.gz
+│               └── gpbackup_14_20241206140221_74129.gz
+├── gpseg15
+│   └── backups
+│       └── 20241206
+│           ├── 20241206134403
+│           │   ├── gpbackup_15_20241206134403_74057.gz
+│           │   ├── gpbackup_15_20241206134403_74060.gz
+│           │   ├── gpbackup_15_20241206134403_74065.gz
+│           │   ├── gpbackup_15_20241206134403_74068.gz
+│           │   ├── gpbackup_15_20241206134403_74073.gz
+│           │   ├── gpbackup_15_20241206134403_74076.gz
+│           │   ├── gpbackup_15_20241206134403_74081.gz
+│           │   ├── gpbackup_15_20241206134403_74085.gz
+│           │   ├── gpbackup_15_20241206134403_74091.gz
+│           │   └── gpbackup_15_20241206134403_74097.gz
+│           └── 20241206140221
+│               ├── gpbackup_15_20241206140221_74057.gz
+│               ├── gpbackup_15_20241206140221_74060.gz
+│               ├── gpbackup_15_20241206140221_74065.gz
+│               ├── gpbackup_15_20241206140221_74068.gz
+│               ├── gpbackup_15_20241206140221_74073.gz
+│               ├── gpbackup_15_20241206140221_74081.gz
+│               ├── gpbackup_15_20241206140221_74085.gz
+│               ├── gpbackup_15_20241206140221_74091.gz
+│               ├── gpbackup_15_20241206140221_74097.gz
+│               └── gpbackup_15_20241206140221_74129.gz
+└── gpseg19
+    └── backups
+        └── 20241206
+            ├── 20241206134403
+            │   ├── gpbackup_19_20241206134403_74057.gz
+            │   ├── gpbackup_19_20241206134403_74060.gz
+            │   ├── gpbackup_19_20241206134403_74065.gz
+            │   ├── gpbackup_19_20241206134403_74068.gz
+            │   ├── gpbackup_19_20241206134403_74073.gz
+            │   ├── gpbackup_19_20241206134403_74076.gz
+            │   ├── gpbackup_19_20241206134403_74081.gz
+            │   ├── gpbackup_19_20241206134403_74085.gz
+            │   ├── gpbackup_19_20241206134403_74091.gz
+            │   └── gpbackup_19_20241206134403_74097.gz
+            └── 20241206140221
+                ├── gpbackup_19_20241206140221_74057.gz
+                ├── gpbackup_19_20241206140221_74060.gz
+                ├── gpbackup_19_20241206140221_74065.gz
+                ├── gpbackup_19_20241206140221_74068.gz
+                ├── gpbackup_19_20241206140221_74073.gz
+                ├── gpbackup_19_20241206140221_74081.gz
+                ├── gpbackup_19_20241206140221_74085.gz
+                ├── gpbackup_19_20241206140221_74091.gz
+                ├── gpbackup_19_20241206140221_74097.gz
+                └── gpbackup_19_20241206140221_74129.gz
+
+25 directories, 100 files
+[gpadmin@Master-a ~]$
+```
+
+
+
+
 
 
 
