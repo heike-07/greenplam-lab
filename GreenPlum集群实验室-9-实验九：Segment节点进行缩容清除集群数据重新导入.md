@@ -511,462 +511,8 @@ total 4419508
 [gpadmin@Master-a backups-Experiment-9]$ touch gpbackup.sh
 [gpadmin@Master-a backups-Experiment-9]$ vim gpbackup.sh 
 [gpadmin@Master-a backups-Experiment-9]$ chmod +x gpbackup.sh 
-[gpadmin@Master-a backups-Experiment-9]$ l
-bash: l: command not found
-[gpadmin@Master-a backups-Experiment-9]$ ls
-gpbackup.sh
-[gpadmin@Master-a backups-Experiment-9]$ ./gpbackup.sh 
-Starting backup for database: backup_test_database
-20241211:13:30:36 gpbackup:gpadmin:Master-a:029515-[INFO]:-gpbackup version = 1.30.7
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Starting backup of database backup_test_database
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Backup Timestamp = 20241211133036
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Backup Database = backup_test_database
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Gathering table state information
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  10 / 10 [===========================================================] 100.00% 0s
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Gathering additional table metadata
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Getting partition definitions
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Getting storage information
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Getting child partitions with altered schema
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/backup_test_database_20241211133036/gpseg-1/backups/20241211/20241211133036/gpbackup_20241211133036_metadata.sql
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Writing global database metadata
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Global database metadata backup complete
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Writing pre-data metadata
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Writing post-data metadata
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Post-data metadata backup complete
-20241211:13:30:37 gpbackup:gpadmin:Master-a:029515-[INFO]:-Writing data to file
-Tables backed up:  10 / 10 [=========================================================] 100.00% 8s
-20241211:13:30:46 gpbackup:gpadmin:Master-a:029515-[INFO]:-Data backup complete
-20241211:13:30:47 gpbackup:gpadmin:Master-a:029515-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:30:47 gpbackup:gpadmin:Master-a:029515-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/backup_test_database_20241211133036/gpseg-1/backups/20241211/20241211133036/gpbackup_20241211133036_report will not be sent
-20241211:13:30:47 gpbackup:gpadmin:Master-a:029515-[INFO]:-Beginning cleanup
-20241211:13:30:47 gpbackup:gpadmin:Master-a:029515-[INFO]:-Cleanup complete
-20241211:13:30:47 gpbackup:gpadmin:Master-a:029515-[INFO]:-Backup completed successfully
-Backup completed successfully for database: backup_test_database
-Starting backup for database: test_database
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-gpbackup version = 1.30.7
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Starting backup of database test_database
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Backup Timestamp = 20241211133047
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Backup Database = test_database
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Gathering table state information
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  10 / 10 [===========================================================] 100.00% 0s
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Gathering additional table metadata
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Getting partition definitions
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Getting storage information
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Getting child partitions with altered schema
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/test_database_20241211133036/gpseg-1/backups/20241211/20241211133047/gpbackup_20241211133047_metadata.sql
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Writing global database metadata
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Global database metadata backup complete
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Writing pre-data metadata
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Writing post-data metadata
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Post-data metadata backup complete
-20241211:13:30:47 gpbackup:gpadmin:Master-a:030032-[INFO]:-Writing data to file
-Tables backed up:  10 / 10 [=========================================================] 100.00% 9s
-20241211:13:30:56 gpbackup:gpadmin:Master-a:030032-[INFO]:-Data backup complete
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030032-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030032-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/test_database_20241211133036/gpseg-1/backups/20241211/20241211133047/gpbackup_20241211133047_report will not be sent
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030032-[INFO]:-Beginning cleanup
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030032-[INFO]:-Cleanup complete
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030032-[INFO]:-Backup completed successfully
-Backup completed successfully for database: test_database
-Starting backup for database: test_db
-20241211:13:30:57 gpbackup:gpadmin:Master-a:030440-[INFO]:-gpbackup version = 1.30.7
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Starting backup of database test_db
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Backup Timestamp = 20241211133058
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Backup Database = test_db
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Gathering table state information
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  4 / 4 [=============================================================] 100.00% 0s
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Gathering additional table metadata
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Getting partition definitions
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Getting storage information
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Getting child partitions with altered schema
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/test_db_20241211133036/gpseg-1/backups/20241211/20241211133058/gpbackup_20241211133058_metadata.sql
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Writing global database metadata
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Global database metadata backup complete
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Writing pre-data metadata
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Writing post-data metadata
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Post-data metadata backup complete
-20241211:13:30:58 gpbackup:gpadmin:Master-a:030440-[INFO]:-Writing data to file
-Tables backed up:  4 / 4 [===========================================================] 100.00% 2s
-20241211:13:31:01 gpbackup:gpadmin:Master-a:030440-[INFO]:-Data backup complete
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030440-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030440-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/test_db_20241211133036/gpseg-1/backups/20241211/20241211133058/gpbackup_20241211133058_report will not be sent
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030440-[INFO]:-Beginning cleanup
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030440-[INFO]:-Cleanup complete
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030440-[INFO]:-Backup completed successfully
-Backup completed successfully for database: test_db
-Starting backup for database: gp_sydb
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030740-[INFO]:-gpbackup version = 1.30.7
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030740-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:31:02 gpbackup:gpadmin:Master-a:030740-[INFO]:-Starting backup of database gp_sydb
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Backup Timestamp = 20241211133102
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Backup Database = gp_sydb
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Gathering table state information
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Acquiring ACCESS SHARE locks on tables
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Gathering additional table metadata
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Getting partition definitions
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Getting storage information
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Getting child partitions with altered schema
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[WARNING]:-No tables in backup set contain data. Performing metadata-only backup instead.
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/gp_sydb_20241211133036/gpseg-1/backups/20241211/20241211133102/gpbackup_20241211133102_metadata.sql
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Writing global database metadata
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Global database metadata backup complete
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Writing pre-data metadata
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Writing post-data metadata
-20241211:13:31:03 gpbackup:gpadmin:Master-a:030740-[INFO]:-Post-data metadata backup complete
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030740-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030740-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/gp_sydb_20241211133036/gpseg-1/backups/20241211/20241211133102/gpbackup_20241211133102_report will not be sent
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030740-[INFO]:-Beginning cleanup
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030740-[INFO]:-Cleanup complete
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030740-[INFO]:-Backup completed successfully
-Backup completed successfully for database: gp_sydb
-Starting backup for database: postgres
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-gpbackup version = 1.30.7
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Starting backup of database postgres
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Backup Timestamp = 20241211133104
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Backup Database = postgres
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Gathering table state information
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  2 / 2 [=============================================================] 100.00% 0s
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Gathering additional table metadata
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Getting partition definitions
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Getting storage information
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Getting child partitions with altered schema
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/postgres_20241211133036/gpseg-1/backups/20241211/20241211133104/gpbackup_20241211133104_metadata.sql
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Writing global database metadata
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Global database metadata backup complete
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Writing pre-data metadata
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Writing post-data metadata
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Post-data metadata backup complete
-20241211:13:31:04 gpbackup:gpadmin:Master-a:030805-[INFO]:-Writing data to file
-Tables backed up:  2 / 2 [===========================================================] 100.00% 0s
-20241211:13:31:05 gpbackup:gpadmin:Master-a:030805-[INFO]:-Data backup complete
-20241211:13:31:06 gpbackup:gpadmin:Master-a:030805-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:31:06 gpbackup:gpadmin:Master-a:030805-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/postgres_20241211133036/gpseg-1/backups/20241211/20241211133104/gpbackup_20241211133104_report will not be sent
-20241211:13:31:06 gpbackup:gpadmin:Master-a:030805-[INFO]:-Beginning cleanup
-20241211:13:31:06 gpbackup:gpadmin:Master-a:030805-[INFO]:-Cleanup complete
-20241211:13:31:06 gpbackup:gpadmin:Master-a:030805-[INFO]:-Backup completed successfully
-Backup completed successfully for database: postgres
-All database backups have been completed.
-[gpadmin@Master-a backups-Experiment-9]$
 
-# 看下备份目录
-[gpadmin@Master-a backups-Experiment-9]$ tree
-.
-├── backup_test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133036
-│                   ├── gpbackup_20241211133036_config.yaml
-│                   ├── gpbackup_20241211133036_metadata.sql
-│                   ├── gpbackup_20241211133036_report
-│                   └── gpbackup_20241211133036_toc.yaml
-├── gpbackup.sh
-├── gp_sydb_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133102
-│                   ├── gpbackup_20241211133102_config.yaml
-│                   ├── gpbackup_20241211133102_metadata.sql
-│                   ├── gpbackup_20241211133102_report
-│                   └── gpbackup_20241211133102_toc.yaml
-├── postgres_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133104
-│                   ├── gpbackup_20241211133104_config.yaml
-│                   ├── gpbackup_20241211133104_metadata.sql
-│                   ├── gpbackup_20241211133104_report
-│                   └── gpbackup_20241211133104_toc.yaml
-├── test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133047
-│                   ├── gpbackup_20241211133047_config.yaml
-│                   ├── gpbackup_20241211133047_metadata.sql
-│                   ├── gpbackup_20241211133047_report
-│                   └── gpbackup_20241211133047_toc.yaml
-└── test_db_20241211133036
-    └── gpseg-1
-        └── backups
-            └── 20241211
-                └── 20241211133058
-                    ├── gpbackup_20241211133058_config.yaml
-                    ├── gpbackup_20241211133058_metadata.sql
-                    ├── gpbackup_20241211133058_report
-                    └── gpbackup_20241211133058_toc.yaml
-
-25 directories, 21 files
-[gpadmin@Master-a backups-Experiment-9]$
-
-备份目录的结构和预期的结构满足要求
-
-首先脚本执行的时候有一个时间对应的文件夹，但是这样还是有些乱，修改一下。
-
-修改后 我们执行2次来看下是否满足预期
-
-
-[gpadmin@Master-a backups-Experiment-9]$ vim gpbackup.sh 
-[gpadmin@Master-a backups-Experiment-9]$ 
-[gpadmin@Master-a backups-Experiment-9]$ 
-[gpadmin@Master-a backups-Experiment-9]$ ./gpbackup.sh 
-Starting backup for database: backup_test_database
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-gpbackup version = 1.30.7
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Starting backup of database backup_test_database
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Backup Timestamp = 20241211133609
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Backup Database = backup_test_database
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Gathering table state information
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  10 / 10 [===========================================================] 100.00% 0s
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Gathering additional table metadata
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Getting partition definitions
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Getting storage information
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Getting child partitions with altered schema
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/backup_test_database/gpseg-1/backups/20241211/20241211133609/gpbackup_20241211133609_metadata.sql
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Writing global database metadata
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Global database metadata backup complete
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Writing pre-data metadata
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Writing post-data metadata
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Post-data metadata backup complete
-20241211:13:36:09 gpbackup:gpadmin:Master-a:041944-[INFO]:-Writing data to file
-Tables backed up:  10 / 10 [=========================================================] 100.00% 8s
-20241211:13:36:17 gpbackup:gpadmin:Master-a:041944-[INFO]:-Data backup complete
-20241211:13:36:18 gpbackup:gpadmin:Master-a:041944-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:36:18 gpbackup:gpadmin:Master-a:041944-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/backup_test_database/gpseg-1/backups/20241211/20241211133609/gpbackup_20241211133609_report will not be sent
-20241211:13:36:18 gpbackup:gpadmin:Master-a:041944-[INFO]:-Beginning cleanup
-20241211:13:36:18 gpbackup:gpadmin:Master-a:041944-[INFO]:-Cleanup complete
-20241211:13:36:18 gpbackup:gpadmin:Master-a:041944-[INFO]:-Backup completed successfully
-Backup completed successfully for database: backup_test_database
-Starting backup for database: test_database
-20241211:13:36:18 gpbackup:gpadmin:Master-a:042353-[INFO]:-gpbackup version = 1.30.7
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Starting backup of database test_database
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Backup Timestamp = 20241211133618
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Backup Database = test_database
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Gathering table state information
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  10 / 10 [===========================================================] 100.00% 0s
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Gathering additional table metadata
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Getting partition definitions
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Getting storage information
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Getting child partitions with altered schema
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/test_database/gpseg-1/backups/20241211/20241211133618/gpbackup_20241211133618_metadata.sql
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Writing global database metadata
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Global database metadata backup complete
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Writing pre-data metadata
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Writing post-data metadata
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Post-data metadata backup complete
-20241211:13:36:19 gpbackup:gpadmin:Master-a:042353-[INFO]:-Writing data to file
-Tables backed up:  10 / 10 [=========================================================] 100.00% 9s
-20241211:13:36:28 gpbackup:gpadmin:Master-a:042353-[INFO]:-Data backup complete
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042353-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042353-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/test_database/gpseg-1/backups/20241211/20241211133618/gpbackup_20241211133618_report will not be sent
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042353-[INFO]:-Beginning cleanup
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042353-[INFO]:-Cleanup complete
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042353-[INFO]:-Backup completed successfully
-Backup completed successfully for database: test_database
-Starting backup for database: test_db
-20241211:13:36:29 gpbackup:gpadmin:Master-a:042869-[INFO]:-gpbackup version = 1.30.7
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Starting backup of database test_db
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Backup Timestamp = 20241211133630
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Backup Database = test_db
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Gathering table state information
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  4 / 4 [=============================================================] 100.00% 0s
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Gathering additional table metadata
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Getting partition definitions
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Getting storage information
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Getting child partitions with altered schema
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/test_db/gpseg-1/backups/20241211/20241211133630/gpbackup_20241211133630_metadata.sql
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Writing global database metadata
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Global database metadata backup complete
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Writing pre-data metadata
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Writing post-data metadata
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Post-data metadata backup complete
-20241211:13:36:30 gpbackup:gpadmin:Master-a:042869-[INFO]:-Writing data to file
-Tables backed up:  4 / 4 [===========================================================] 100.00% 2s
-20241211:13:36:33 gpbackup:gpadmin:Master-a:042869-[INFO]:-Data backup complete
-20241211:13:36:34 gpbackup:gpadmin:Master-a:042869-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:36:34 gpbackup:gpadmin:Master-a:042869-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/test_db/gpseg-1/backups/20241211/20241211133630/gpbackup_20241211133630_report will not be sent
-20241211:13:36:34 gpbackup:gpadmin:Master-a:042869-[INFO]:-Beginning cleanup
-20241211:13:36:34 gpbackup:gpadmin:Master-a:042869-[INFO]:-Cleanup complete
-20241211:13:36:34 gpbackup:gpadmin:Master-a:042869-[INFO]:-Backup completed successfully
-Backup completed successfully for database: test_db
-Starting backup for database: gp_sydb
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-gpbackup version = 1.30.7
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Starting backup of database gp_sydb
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Backup Timestamp = 20241211133634
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Backup Database = gp_sydb
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Gathering table state information
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Acquiring ACCESS SHARE locks on tables
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Gathering additional table metadata
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Getting partition definitions
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Getting storage information
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Getting child partitions with altered schema
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[WARNING]:-No tables in backup set contain data. Performing metadata-only backup instead.
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/gp_sydb/gpseg-1/backups/20241211/20241211133634/gpbackup_20241211133634_metadata.sql
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Writing global database metadata
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Global database metadata backup complete
-20241211:13:36:34 gpbackup:gpadmin:Master-a:043061-[INFO]:-Writing pre-data metadata
-20241211:13:36:35 gpbackup:gpadmin:Master-a:043061-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:36:35 gpbackup:gpadmin:Master-a:043061-[INFO]:-Writing post-data metadata
-20241211:13:36:35 gpbackup:gpadmin:Master-a:043061-[INFO]:-Post-data metadata backup complete
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043061-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043061-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/gp_sydb/gpseg-1/backups/20241211/20241211133634/gpbackup_20241211133634_report will not be sent
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043061-[INFO]:-Beginning cleanup
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043061-[INFO]:-Cleanup complete
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043061-[INFO]:-Backup completed successfully
-Backup completed successfully for database: gp_sydb
-Starting backup for database: postgres
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-gpbackup version = 1.30.7
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Greenplum Database Version = 6.13.0 build commit:4f1adf8e247a9685c19ea02bcaddfdc200937ecd Open Source
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Starting backup of database postgres
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Backup Timestamp = 20241211133636
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Backup Database = postgres
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Gathering table state information
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Acquiring ACCESS SHARE locks on tables
-Locks acquired:  2 / 2 [=============================================================] 100.00% 0s
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Gathering additional table metadata
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Getting partition definitions
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Getting storage information
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Getting child partitions with altered schema
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Metadata will be written to /home/gpadmin/backups-Experiment-9/postgres/gpseg-1/backups/20241211/20241211133636/gpbackup_20241211133636_metadata.sql
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Writing global database metadata
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Global database metadata backup complete
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Writing pre-data metadata
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Pre-data metadata metadata backup complete
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Writing post-data metadata
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Post-data metadata backup complete
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Writing data to file
-Tables backed up:  2 / 2 [===========================================================] 100.00% 0s
-20241211:13:36:36 gpbackup:gpadmin:Master-a:043234-[INFO]:-Data backup complete
-20241211:13:36:37 gpbackup:gpadmin:Master-a:043234-[INFO]:-Found neither /usr/local/greenplum-db/bin/gp_email_contacts.yaml nor /home/gpadmin/gp_email_contacts.yaml
-20241211:13:36:37 gpbackup:gpadmin:Master-a:043234-[INFO]:-Email containing gpbackup report /home/gpadmin/backups-Experiment-9/postgres/gpseg-1/backups/20241211/20241211133636/gpbackup_20241211133636_report will not be sent
-20241211:13:36:37 gpbackup:gpadmin:Master-a:043234-[INFO]:-Beginning cleanup
-20241211:13:36:37 gpbackup:gpadmin:Master-a:043234-[INFO]:-Cleanup complete
-20241211:13:36:37 gpbackup:gpadmin:Master-a:043234-[INFO]:-Backup completed successfully
-Backup completed successfully for database: postgres
-All database backups have been completed.
-[gpadmin@Master-a backups-Experiment-9]$
-
-# 查看一下文件结构
-.
-├── backup_test_database
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133609
-│                   ├── gpbackup_20241211133609_config.yaml
-│                   ├── gpbackup_20241211133609_metadata.sql
-│                   ├── gpbackup_20241211133609_report
-│                   └── gpbackup_20241211133609_toc.yaml
-├── backup_test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133036
-│                   ├── gpbackup_20241211133036_config.yaml
-│                   ├── gpbackup_20241211133036_metadata.sql
-│                   ├── gpbackup_20241211133036_report
-│                   └── gpbackup_20241211133036_toc.yaml
-├── gpbackup.sh
-├── gp_sydb
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133634
-│                   ├── gpbackup_20241211133634_config.yaml
-│                   ├── gpbackup_20241211133634_metadata.sql
-│                   ├── gpbackup_20241211133634_report
-│                   └── gpbackup_20241211133634_toc.yaml
-├── gp_sydb_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133102
-│                   ├── gpbackup_20241211133102_config.yaml
-│                   ├── gpbackup_20241211133102_metadata.sql
-│                   ├── gpbackup_20241211133102_report
-│                   └── gpbackup_20241211133102_toc.yaml
-├── postgres
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133636
-│                   ├── gpbackup_20241211133636_config.yaml
-│                   ├── gpbackup_20241211133636_metadata.sql
-│                   ├── gpbackup_20241211133636_report
-│                   └── gpbackup_20241211133636_toc.yaml
-├── postgres_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133104
-│                   ├── gpbackup_20241211133104_config.yaml
-│                   ├── gpbackup_20241211133104_metadata.sql
-│                   ├── gpbackup_20241211133104_report
-│                   └── gpbackup_20241211133104_toc.yaml
-├── test_database
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133618
-│                   ├── gpbackup_20241211133618_config.yaml
-│                   ├── gpbackup_20241211133618_metadata.sql
-│                   ├── gpbackup_20241211133618_report
-│                   └── gpbackup_20241211133618_toc.yaml
-├── test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133047
-│                   ├── gpbackup_20241211133047_config.yaml
-│                   ├── gpbackup_20241211133047_metadata.sql
-│                   ├── gpbackup_20241211133047_report
-│                   └── gpbackup_20241211133047_toc.yaml
-├── test_db
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133630
-│                   ├── gpbackup_20241211133630_config.yaml
-│                   ├── gpbackup_20241211133630_metadata.sql
-│                   ├── gpbackup_20241211133630_report
-│                   └── gpbackup_20241211133630_toc.yaml
-└── test_db_20241211133036
-    └─��� gpseg-1
-        └── backups
-            └── 20241211
-                └── 20241211133058
-                    ├── gpbackup_20241211133058_config.yaml
-                    ├── gpbackup_20241211133058_metadata.sql
-                    ├── gpbackup_20241211133058_report
-                    └── gpbackup_20241211133058_toc.yaml
-
-50 directories, 41 files
-
-# 在执行一次
+# 执行两次脚本看看能不能通过时间戳进行分类
 [gpadmin@Master-a backups-Experiment-9]$ ./gpbackup.sh 
 Starting backup for database: backup_test_database
 20241211:13:38:41 gpbackup:gpadmin:Master-a:047750-[INFO]:-gpbackup version = 1.30.7
@@ -1113,7 +659,7 @@ Backup completed successfully for database: postgres
 All database backups have been completed.
 [gpadmin@Master-a backups-Experiment-9]$
 
-# 再看下文件结构
+# 查看文件结构
 [gpadmin@Master-a backups-Experiment-9]$ tree
 .
 ├── backup_test_database
@@ -1130,15 +676,6 @@ All database backups have been completed.
 │                   ├── gpbackup_20241211133841_metadata.sql
 │                   ├── gpbackup_20241211133841_report
 │                   └── gpbackup_20241211133841_toc.yaml
-├── backup_test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133036
-│                   ├── gpbackup_20241211133036_config.yaml
-│                   ├── gpbackup_20241211133036_metadata.sql
-│                   ├── gpbackup_20241211133036_report
-│                   └── gpbackup_20241211133036_toc.yaml
 ├── gpbackup.sh
 ├── gp_sydb
 │   └── gpseg-1
@@ -1154,15 +691,6 @@ All database backups have been completed.
 │                   ├── gpbackup_20241211133907_metadata.sql
 │                   ├── gpbackup_20241211133907_report
 │                   └── gpbackup_20241211133907_toc.yaml
-├── gp_sydb_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133102
-│                   ├── gpbackup_20241211133102_config.yaml
-│                   ├── gpbackup_20241211133102_metadata.sql
-│                   ├── gpbackup_20241211133102_report
-│                   └── gpbackup_20241211133102_toc.yaml
 ├── postgres
 │   └── gpseg-1
 │       └── backups
@@ -1177,15 +705,6 @@ All database backups have been completed.
 │                   ├── gpbackup_20241211133908_metadata.sql
 │                   ├── gpbackup_20241211133908_report
 │                   └── gpbackup_20241211133908_toc.yaml
-├── postgres_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133104
-│                   ├── gpbackup_20241211133104_config.yaml
-│                   ├── gpbackup_20241211133104_metadata.sql
-│                   ├── gpbackup_20241211133104_report
-│                   └── gpbackup_20241211133104_toc.yaml
 ├── test_database
 │   └── gpseg-1
 │       └── backups
@@ -1200,63 +719,23 @@ All database backups have been completed.
 │                   ├── gpbackup_20241211133851_metadata.sql
 │                   ├── gpbackup_20241211133851_report
 │                   └── gpbackup_20241211133851_toc.yaml
-├── test_database_20241211133036
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               └── 20241211133047
-│                   ├── gpbackup_20241211133047_config.yaml
-│                   ├── gpbackup_20241211133047_metadata.sql
-│                   ├── gpbackup_20241211133047_report
-│                   └── gpbackup_20241211133047_toc.yaml
 ├── test_db
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               ├── 20241211133630
-│               │   ├── gpbackup_20241211133630_config.yaml
-│               │   ├── gpbackup_20241211133630_metadata.sql
-│               │   ├── gpbackup_20241211133630_report
-│               │   └── gpbackup_20241211133630_toc.yaml
-│               └── 20241211133902
-│                   ├── gpbackup_20241211133902_config.yaml
-│                   ├── gpbackup_20241211133902_metadata.sql
-│                   ├── gpbackup_20241211133902_report
-│                   └── gpbackup_20241211133902_toc.yaml
-└── test_db_20241211133036
     └── gpseg-1
         └── backups
             └── 20241211
-                └── 20241211133058
-                    ├── gpbackup_20241211133058_config.yaml
-                    ├── gpbackup_20241211133058_metadata.sql
-                    ├── gpbackup_20241211133058_report
-                    └── gpbackup_20241211133058_toc.yaml
+                ├── 20241211133630
+                │   ├── gpbackup_20241211133630_config.yaml
+                │   ├── gpbackup_20241211133630_metadata.sql
+                │   ├── gpbackup_20241211133630_report
+                │   └── gpbackup_20241211133630_toc.yaml
+                └── 20241211133902
+                    ├── gpbackup_20241211133902_config.yaml
+                    ├── gpbackup_20241211133902_metadata.sql
+                    ├── gpbackup_20241211133902_report
+                    └── gpbackup_20241211133902_toc.yaml
 
-55 directories, 61 files
-[gpadmin@Master-a backups-Experiment-9]$
-
-可以看到满足预期了，
-
-├── test_db
-│   └── gpseg-1
-│       └── backups
-│           └── 20241211
-│               ├── 20241211133630
-│               │   ├── gpbackup_20241211133630_config.yaml
-│               │   ├── gpbackup_20241211133630_metadata.sql
-│               │   ├── gpbackup_20241211133630_report
-│               │   └── gpbackup_20241211133630_toc.yaml
-│               └── 20241211133902
-│                   ├── gpbackup_20241211133902_config.yaml
-│                   ├── gpbackup_20241211133902_metadata.sql
-│                   ├── gpbackup_20241211133902_report
-│                   └── gpbackup_20241211133902_toc.yaml
-
-# 说明
+# 文件结构说明
 数据库名称-Sengment实例名称-backups-时间（GP自生成）-时间戳（GP自生成）
-
 以上完成了所有数据库的备份，可以开始进行实验了。
-
 ```
 
