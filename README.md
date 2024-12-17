@@ -15,7 +15,9 @@
 - [实验八：数据备份与恢复](./GreenPlum集群实验室-8-实验八：数据备份&数据恢复.md) - 完成
 - [实验九：Segment节点进行缩容攻克](./GreenPlum集群实验室-9-实验九：Segment节点进行缩容攻克.md) - 完成
 - [实验十：数据库账户密码&权限认证相关](./GreenPlum集群实验室-10-实验十：数据库账户密码&权限认证相关.md) - 进行中
-- [实验...] - 规划中
+- [实验十一：数据库版本更新](./GreenPlum集群实验室-11-实验十一：数据库版本更新.md) - 完成
+
+因Greenplum协议变更，后续在[apache-cloudberry分支](https://github.com/heike-07/greenplam-lab/blob/apache-cloudberry/README.md)中更新相关内容。
 
 
 ## 项目介绍
