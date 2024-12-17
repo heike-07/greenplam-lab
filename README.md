@@ -5,6 +5,7 @@
 
 欢迎访问 GreenPlum 集群实验室项目，下面是各个实验文件的列表，点击链接可以跳转到对应的实验文件。
 
+- [实验零：实验准备](./GreenPlum集群实验室-0-整体介绍：主机规划and实验准备.md) - 完成
 - [实验一：搭建3节点集群](./GreenPlum集群实验室-1-实验一：搭建3节点一个Master和2个Segment不含Mirror镜像的集群.md) - 完成
 - [实验二：扩容Segment](./GreenPlum集群实验室-2-实验二：在原有集群基础上扩容2个Segment_instance_primary不含Mirror.md) - 完成
 - [实验三：扩容Segment和Mirror](./GreenPlum集群实验室-3-实验三：在原有集群基础上扩容与primary数量相同的Segment_instance_mirror.md) - 完成
